@@ -5,7 +5,7 @@
   "main": "code/main.js",
   "directories": {},
   "scripts": {
-    "start": "npm run --silent build && npm run --silent installed 2>/dev/null && npm run --silent upgrade || npm run --silent install",
+    "start": "npm run --silent build && npm run --silent installed 2>/dev/null && { npm run --silent upgrade; echo UPGRADED; } || { npm run --silent install && echo INSTALLED; }",
     "build": "node build.js > metadata.desktop",
     "installed": "plasmapkg2 --type kwinscript --show yanjing",
     "install": "plasmapkg2 --type kwinscript --install .",
