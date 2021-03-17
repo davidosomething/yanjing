@@ -1,0 +1,25 @@
+{
+  "name": "yanjing",
+  "version": "1.0.0",
+  "description": "Window size and movement",
+  "main": "code/main.js",
+  "directories": {},
+  "scripts": {
+    "build:desktop": "node build.js > metadata.desktop",
+    "install": "plasmapkg2 --type kwinscript --install .",
+    "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
+    "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
+    "release": "zip -r yanjing.kwinscript contents/ LICENSE metadata.desktop",
+    "test": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
+    "clearShortcuts": "sed -i '/Yanjing/d' ~/.config/kglobalshortcutsrc"
+  },
+  "author": {
+    "name": "David O'Trakoun",
+    "email": "me@davidosomething.com",
+    "url": "https://davidosomething.com/"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "nunjucks": "^3.2.3"
+  }
+}
