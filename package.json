@@ -5,13 +5,14 @@
   "main": "code/main.js",
   "directories": {},
   "scripts": {
-    "build:desktop": "node build.js > metadata.desktop",
+    "start": "npm run --silent build && npm run --silent installed 2>/dev/null && npm run --silent upgrade || npm run --silent install",
+    "build": "node build.js > metadata.desktop",
+    "installed": "plasmapkg2 --type kwinscript --show yanjing",
     "install": "plasmapkg2 --type kwinscript --install .",
     "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
     "release": "zip -r yanjing.kwinscript contents/ LICENSE metadata.desktop",
-    "test": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
-    "clearShortcuts": "sed -i '/Yanjing/d' ~/.config/kglobalshortcutsrc"
+    "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole"
   },
   "author": {
     "name": "David O'Trakoun",
