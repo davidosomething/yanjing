@@ -1,6 +1,6 @@
 {
   "name": "yanjing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Window size and movement",
   "homepage": "https://github.com/davidosomething/yanjing",
   "main": "code/main.js",
@@ -12,7 +12,7 @@
     "install": "plasmapkg2 --type kwinscript --install .",
     "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
-    "release": "zip -r yanjing.kwinscript contents/ LICENSE metadata.desktop",
+    "release": "npm run --silent build && zip -r yanjing.kwinscript contents/ LICENSE metadata.desktop",
     "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole"
   },
   "author": {

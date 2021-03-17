@@ -1,8 +1,10 @@
+// Percent of screen to fill
 var Sizes = [
   25,
-  33,
+  33.333,
   50,
-  66,
+  66.666,
+  75,
 ];
 
 function cycle(client, dir) {
@@ -29,7 +31,7 @@ function cycle(client, dir) {
   var nextI = smallestI === Sizes.length - 1 ? 0 : smallestI + 1;
   var nextSize = Sizes[nextI];
 
-  var nextWidth = Math.floor(nextSize / 100 * workspace.workspaceWidth);
+  var nextWidth = nextSize / 100 * workspace.workspaceWidth;
   rect.width = nextWidth;
   client.geometry = rect;
 
