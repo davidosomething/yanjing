@@ -2,6 +2,7 @@
   "name": "yanjing",
   "version": "1.0.0",
   "description": "Window size and movement",
+  "homepage": "https://github.com/davidosomething/yanjing",
   "main": "code/main.js",
   "directories": {},
   "scripts": {
