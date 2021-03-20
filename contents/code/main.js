@@ -212,9 +212,11 @@ Yanjing.main = function () {
   );
 };
 
+Yanjing.main();
+
 // Expose for testing
-if (global && __DEV__) {
+try {
   global.Yanjing = Yanjing;
-} else {
-  Yanjing.main();
+} catch (error) {
+  /* noop */
 }
