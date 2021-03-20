@@ -1,19 +1,27 @@
 {
+  "private": true,
   "name": "yanjing",
   "version": "1.1.0",
   "description": "Window size and movement",
   "homepage": "https://github.com/davidosomething/yanjing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davidosomething/yanjing.git"
+  },
   "main": "code/main.js",
   "directories": {},
   "scripts": {
+    "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
+    "test": "jest",
     "start": "npm run --silent build && npm run --silent installed 2>/dev/null && { npm run --silent upgrade; echo UPGRADED; } || { npm run --silent install && echo INSTALLED; }",
-    "build": "node build.js > metadata.desktop",
+    "build": "node scripts/build.js > metadata.desktop",
     "installed": "plasmapkg2 --type kwinscript --show yanjing",
     "install": "plasmapkg2 --type kwinscript --install .",
     "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
-    "release": "npm run --silent build && zip -r yanjing.kwinscript contents/ LICENSE metadata.desktop",
-    "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole"
+    "package": "zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop",
+    "version": "npm run --silent build && npm run --silent package",
+    "postversion": "git push && git push --tags && rm -rf build/temp"
   },
   "author": {
     "name": "David O'Trakoun",
@@ -22,6 +30,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "jest": "^26.6.3",
     "nunjucks": "^3.2.3"
   }
 }

@@ -7,13 +7,18 @@ KWin script to resize and move windows
 `ctrl-shift-meta-a` - Flush the window to the LEFT side of the screen, or
 resize it if already flushed.
 
+`ctrl-shift-meta-x` - Center window horizontally or resize it if already
+centered. Centering allows a 2px margin of error.
+
 `ctrl-shift-meta-d` - Flush the window to the RIGHT side of the screen, or
 resize it if already flushed.
 
 ### Resizing logic
 
-Steps through [Sizes array](./contents/code/main.js), so from 25% of screen,
-to 33%, 50%, 66%, and then back around to 25%.
+The window will steps through the [Sizes array](./contents/code/main.js).
+It does so in reverse order, so as you "shove" the window against each edge of
+the screen or into the center more, it shrinks. It will loop back to the
+largest size.
 
 ## License
 
