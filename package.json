@@ -20,8 +20,7 @@
     "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
     "package": "zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop",
-    "version": "npm run --silent build && npm run --silent package",
-    "postversion": "git push && git push --tags && rm -rf build/temp"
+    "version": "npm run --silent build && npm run --silent package"
   },
   "author": {
     "name": "David O'Trakoun",
