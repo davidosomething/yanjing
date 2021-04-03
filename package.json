@@ -13,12 +13,12 @@
   "scripts": {
     "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
     "test": "jest",
-    "start": "npm run --silent build && npm run --silent installed 2>/dev/null && { npm run --silent upgrade; echo UPGRADED; } || { npm run --silent install && echo INSTALLED; }",
+    "start": "npm run --silent build && npm run --silent kwin:is_installed 2>/dev/null && { npm run --silent upgrade; echo UPGRADED; } || { npm run --silent install && echo INSTALLED; }",
     "build": "node scripts/build.js > metadata.desktop",
-    "installed": "plasmapkg2 --type kwinscript --show yanjing",
-    "install": "plasmapkg2 --type kwinscript --install .",
-    "upgrade": "plasmapkg2 --type kwinscript --upgrade .",
-    "uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
+    "kwin:is_installed": "plasmapkg2 --type kwinscript --show yanjing",
+    "kwin:install": "plasmapkg2 --type kwinscript --install .",
+    "kwin:upgrade": "plasmapkg2 --type kwinscript --upgrade .",
+    "kwin:uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
     "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop"
   },
   "author": {
