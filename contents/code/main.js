@@ -91,10 +91,11 @@ Yanjing.getNextWidth = function (clientWidth) {
 /**
  * @param {object} client
  * @param {string} dir 'Left'
+ * @return {number} Yanjing.States value
  */
 Yanjing.cycle = function (client, dir) {
   if (!client.resizeable) {
-    return;
+    return Yanjing.States.ERROR;
   }
 
   var rect = client.geometry; // { width, height, x, y }
@@ -108,6 +109,11 @@ Yanjing.cycle = function (client, dir) {
 };
 
 Yanjing.Move = {};
+
+/**
+ * @param {object} client
+ * @return {number} Yanjing.States value
+ */
 Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
   var rect = client.geometry;
   var isFlushed = rect.x === 0;
@@ -126,6 +132,10 @@ Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
   return Yanjing.States.ERROR;
 };
 
+/**
+ * @param {object} client
+ * @return {number} Yanjing.States value
+ */
 Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
   var rect = client.geometry;
   var clientWidth = rect.width;
@@ -146,6 +156,10 @@ Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
   return Yanjing.States.ERROR;
 };
 
+/**
+ * @param {object} client
+ * @return {number} Yanjing.States value
+ */
 Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
   var rect = client.geometry;
   var clientWidth = rect.width;
@@ -172,43 +186,108 @@ Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
 };
 
 /**
+ * @param {object} client
  * @param {string} key
+ * @return {number} Yanjing.States value
  */
-Yanjing.squish = function (key) {
-  var client = workspace.activeClient;
+Yanjing.squish = function (client, key) {
   var dir = Yanjing.Dirs[key];
   var move = Yanjing.Move[key];
   if (!move || !dir) {
     print('Unrecognized command');
-    return;
+    return Yanjing.States.ERROR;
   }
 
   if (move(client) === Yanjing.States.NOOP) {
     print('Client already positioned');
-    Yanjing.cycle(client, dir);
+    return Yanjing.cycle(client, dir);
   }
+};
+
+/**
+ * @param {object} client
+ * @return {number} Yanjing.States value
+ */
+Yanjing.yMax = function (client) {
+  if (!client || !client.resizeable) {
+    return Yanjing.States.ERROR;
+  }
+
+  // Work area for the active cliint, considers things like docks!
+  var workAreaRect = workspace.clientArea(
+    KWin.WorkArea,
+    workspace.activeClient
+  );
+
+  var rect = client.geometry;
+  rect.y = workAreaRect.y
+  rect.height = workAreaRect.height;
+  client.geometry = rect;
+  return Yanjing.States.DONE;
 };
 
 Yanjing.main = function () {
   registerShortcut(
     'left',
     'Yanjing: Flush or cyclic resize window to left edge of screen',
-    'ctrl+shift+meta+a',
-    function () { Yanjing.squish(Yanjing.Dirs.Left); }
+    '',
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.squish(client, Yanjing.Dirs.Left);
+    }
   );
 
   registerShortcut(
     'center',
     'Yanjing: Center or cyclic resize window',
-    'ctrl+shift+meta+x',
-    function () { Yanjing.squish(Yanjing.Dirs.Center); }
+    '',
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.squish(client, Yanjing.Dirs.Center);
+    }
   );
 
   registerShortcut(
     'right',
     'Yanjing: Flush or cyclic resize window to right edge of screen',
+    '',
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.squish(Yanjing.Dirs.Right);
+    }
+  );
+
+  registerShortcut(
+    'left-ymax',
+    'Yanjing: Vertically maximize and flush or cyclic resize window to left edge of screen',
+    'ctrl+shift+meta+a',
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.yMax(client);
+      Yanjing.squish(client, Yanjing.Dirs.Left);
+    }
+  );
+
+  registerShortcut(
+    'center-ymax',
+    'Yanjing: Vertically maximize and center or cyclic resize window',
+    'ctrl+shift+meta+x',
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.yMax(client);
+      Yanjing.squish(client, Yanjing.Dirs.Center);
+    }
+  );
+
+  registerShortcut(
+    'right-ymax',
+    'Yanjing: Vertically maximize and flush or cyclic resize window to right edge of screen',
     'ctrl+shift+meta+d',
-    function () { Yanjing.squish(Yanjing.Dirs.Right); }
+    function () {
+      var client = workspace.activeClient;
+      Yanjing.yMax(client);
+      Yanjing.squish(client, Yanjing.Dirs.Right);
+    }
   );
 };
 

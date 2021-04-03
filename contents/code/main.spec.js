@@ -4,8 +4,25 @@
 
 global.print = jest.fn();
 global.registerShortcut = jest.fn();
+
+global.KWin = {
+  WorkArea: 'WorkArea',
+};
+
+const ClientRects = {
+  WorkArea: { x: 0, y: 32, width: 1920, height: 1080 - 32 - 32 },
+};
+
 global.workspace = {
+  workspaceHeight: 1080,
   workspaceWidth: 1920,
+
+  /**
+   * Return workspace minus docks!
+   */
+  clientArea: jest.fn().mockImplementation(function (ClientAreaOption, activeClient) {
+    return ClientRects[ClientAreaOption];
+  })
 };
 
 // ===========================================================================
@@ -20,7 +37,7 @@ it('has Yanjing', () => {
 
 it('calls registerShortcut in main', () => {
   Yanjing.main();
-  expect(global.registerShortcut).toHaveBeenCalledTimes(3);
+  expect(global.registerShortcut).toHaveBeenCalledTimes(6);
 });
 
 describe('sizeToWidth', () => {
@@ -87,7 +104,8 @@ describe('Move', () => {
       const client = {
         geometry: { x: 0 },
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Left](client)).toBe(Yanjing.States.NOOP)
+      expect(Yanjing.Move[Yanjing.Dirs.Left](client))
+        .toBe(Yanjing.States.NOOP);
     });
 
     it(`should ignore immoveable windows`, () => {
@@ -95,7 +113,8 @@ describe('Move', () => {
         geometry: { x: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Left](client)).toBe(Yanjing.States.ERROR)
+      expect(Yanjing.Move[Yanjing.Dirs.Left](client))
+        .toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
@@ -104,8 +123,8 @@ describe('Move', () => {
         moveable: true,
       };
       const result = Yanjing.Move[Yanjing.Dirs.Left](client);
-      expect(result).toBe(Yanjing.States.DONE)
-      expect(client.geometry.x).toBe(0)
+      expect(result).toBe(Yanjing.States.DONE);
+      expect(client.geometry.x).toBe(0);
     });
   });
 
@@ -114,12 +133,14 @@ describe('Move', () => {
       const maximizedClient = {
         geometry: { x: 0, width: 1920 },
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedClient)).toBe(Yanjing.States.NOOP)
+      expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedClient))
+        .toBe(Yanjing.States.NOOP);
 
       const flushedClient = {
         geometry: { x: 920, width: 1000 },
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](flushedClient)).toBe(Yanjing.States.NOOP)
+      expect(Yanjing.Move[Yanjing.Dirs.Right](flushedClient))
+        .toBe(Yanjing.States.NOOP);
     });
 
     it(`should ignore immoveable windows`, () => {
@@ -127,7 +148,8 @@ describe('Move', () => {
         geometry: { x: 100, width: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](client)).toBe(Yanjing.States.ERROR)
+      expect(Yanjing.Move[Yanjing.Dirs.Right](client))
+        .toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
@@ -136,8 +158,8 @@ describe('Move', () => {
         moveable: true,
       };
       const result = Yanjing.Move[Yanjing.Dirs.Right](client);
-      expect(result).toBe(Yanjing.States.DONE)
-      expect(client.geometry.x).toBe(1820)
+      expect(result).toBe(Yanjing.States.DONE);
+      expect(client.geometry.x).toBe(1820);
     });
   });
 
@@ -146,12 +168,14 @@ describe('Move', () => {
       const maximizedClient = {
         geometry: { x: 0, width: 1920 },
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedClient)).toBe(Yanjing.States.NOOP)
+      expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedClient))
+        .toBe(Yanjing.States.NOOP);
 
       const centeredClient = {
         geometry: { x: 900, width: 120 },
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](centeredClient)).toBe(Yanjing.States.NOOP)
+      expect(Yanjing.Move[Yanjing.Dirs.Center](centeredClient))
+        .toBe(Yanjing.States.NOOP);
     });
 
     it(`should ignore immoveable windows`, () => {
@@ -159,7 +183,8 @@ describe('Move', () => {
         geometry: { x: 100, width: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](client)).toBe(Yanjing.States.ERROR)
+      expect(Yanjing.Move[Yanjing.Dirs.Center](client))
+        .toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
@@ -168,8 +193,35 @@ describe('Move', () => {
         moveable: true,
       };
       const result = Yanjing.Move[Yanjing.Dirs.Center](client);
-      expect(result).toBe(Yanjing.States.DONE)
-      expect(client.geometry.x).toBe(960-(100/2))
+      expect(result).toBe(Yanjing.States.DONE);
+      expect(client.geometry.x).toBe(960-(100/2));
     });
+  });
+});
+
+describe('yMax', () => {
+  it('should return ERROR if cannot resize', () => {
+    const result1 = Yanjing.yMax(null);
+    expect(result1).toBe(Yanjing.States.ERROR);
+
+    const client = {
+      geometry: { x: 100, height: 200, width: 500 },
+      moveable: true,
+    };
+    const result2 = Yanjing.yMax(client);
+    expect(result2).toBe(Yanjing.States.ERROR);
+
+  });
+
+  it('should resize client to workspace work area height', () => {
+    const client = {
+      geometry: { x: 100, height: 200, width: 500 },
+      moveable: true,
+      resizeable: true,
+    };
+    const result = Yanjing.yMax(client);
+    expect(result).toBe(Yanjing.States.DONE);
+    expect(client.geometry.y).toBe(ClientRects.WorkArea.y);
+    expect(client.geometry.height).toBe(ClientRects.WorkArea.height);
   });
 });
