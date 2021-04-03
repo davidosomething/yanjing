@@ -1,17 +1,27 @@
 # Yanjing
 
-KWin script to resize and move windows
+KWin script to resize and move windows.
 
 ## Commands 
 
-`ctrl-shift-meta-a` - Flush the window to the LEFT side of the screen, or
-resize it if already flushed.
-
-`ctrl-shift-meta-x` - Center window horizontally or resize it if already
-centered. Centering allows a 2px margin of error.
-
-`ctrl-shift-meta-d` - Flush the window to the RIGHT side of the screen, or
-resize it if already flushed.
+- Yanjing LEFT - `no default`
+    - Vertically maximize, flush the window to the LEFT side of the screen, or
+      resize width if already flushed.
+- Yanjing CENTER - `no default`
+    - Vertically maximize, center window horizontally, or resize width if
+      already centered. Centering allows a 2px margin of error.
+- Yanjing RIGHT - `no default`
+    - Vertically maximize, flush the window to the RIGHT side of the screen,
+      or resize width if already flushed.
+- Yanjing yMax + LEFT - `ctrl-shift-meta-a`
+    - Vertically maximize, flush the window to the LEFT side of the screen, or
+      resize width if already flushed.
+- Yanjing yMax + CENTER - `ctrl-shift-meta-x` - 
+    - Vertically maximize, center window horizontally, or resize width if
+      already centered. Centering allows a 2px margin of error.
+- Yanjing yMax + RIGHT - `ctrl-shift-meta-d`
+    - Vertically maximize, flush the window to the RIGHT side of the screen,
+      or resize width if already flushed.
 
 ### Resizing logic
 
