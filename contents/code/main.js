@@ -7,9 +7,9 @@ var Yanjing = {};
 Yanjing.CENTER_MOE = 2;
 
 Yanjing.States = {
-  NOOP: 0,
-  DONE: 1,
-  ERROR: 2,
+  NOOP: 'NOOP',
+  DONE: 'DONE',
+  ERROR: 'ERROR',
 };
 
 // Percent of screen to fill
@@ -27,15 +27,23 @@ Yanjing.Dirs = {
   Right: 'Right',
 };
 
-Yanjing.AfterCycle = {};
-Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(client) {
-  return Yanjing.States.DONE;
+/**
+ * @return {QRect}
+ */
+Yanjing.getWorkAreaRect = function () {
+  return workspace.clientArea(
+    KWin.WorkArea,
+    workspace.activeScreen,
+    workspace.currentDesktop
+  );
 };
-Yanjing.AfterCycle[Yanjing.Dirs.Center] = function afterCycleCenter(client) {
-  return Yanjing.Move[Yanjing.Dirs.Center](client);
-};
-Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(client) {
-  return Yanjing.Move[Yanjing.Dirs.Right](client);
+
+/**
+ * @param {QRect} rect
+ * @return {number}
+ */
+Yanjing.getRightEdge = function (rect) {
+  return rect.x + rect.width;
 };
 
 /**
@@ -43,7 +51,7 @@ Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(client) {
  * @return {number} width e.g. 359.9
  */
 Yanjing.sizeToWidth = function (size) {
-  return size / 100 * workspace.workspaceWidth;
+  return size / 100 * Yanjing.getWorkAreaRect().width;
 };
 
 /**
@@ -53,7 +61,7 @@ Yanjing.sizeToWidth = function (size) {
  */
 Yanjing.widthToSizeIndex = function (clientWidth) {
   // E.g. if window is 650px and screen is 1080 we'd get 33
-  var intWidthPercent = Math.round(clientWidth / workspace.workspaceWidth * 100);
+  var intWidthPercent = Math.round(clientWidth / Yanjing.getWorkAreaRect().width * 100);
 
   var smallestDiff = 9999;
   var smallestI = 0;
@@ -88,10 +96,21 @@ Yanjing.getNextWidth = function (clientWidth) {
   return nextWidth;
 };
 
+Yanjing.AfterCycle = {};
+Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(client) {
+  return Yanjing.States.DONE;
+};
+Yanjing.AfterCycle[Yanjing.Dirs.Center] = function afterCycleCenter(client) {
+  return Yanjing.Move[Yanjing.Dirs.Center](client);
+};
+Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(client) {
+  return Yanjing.Move[Yanjing.Dirs.Right](client);
+};
+
 /**
  * @param {object} client
  * @param {string} dir 'Left'
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.cycle = function (client, dir) {
   if (!client.resizeable) {
@@ -112,18 +131,19 @@ Yanjing.Move = {};
 
 /**
  * @param {object} client
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
   var rect = client.geometry;
-  var isFlushed = rect.x === 0;
+  var workAreaLeftEdge = Yanjing.getWorkAreaRect().x;
+  var isFlushed = rect.x === workAreaLeftEdge;
   if (isFlushed) {
     return Yanjing.States.NOOP;
   }
 
   if (client.moveable) {
     var rect = client.geometry;
-    rect.x = 0;
+    rect.x = workAreaLeftEdge;
     client.geometry = rect;
     return Yanjing.States.DONE;
   }
@@ -134,20 +154,27 @@ Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
 
 /**
  * @param {object} client
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
   var rect = client.geometry;
-  var clientWidth = rect.width;
-  var flushedX = workspace.workspaceWidth - clientWidth;
-  var isFlushed = rect.x === flushedX;
+  var clientRightEdge = Yanjing.getRightEdge(rect);
+
+  var workAreaRect = Yanjing.getWorkAreaRect();
+  var workAreaRightEdge = Yanjing.getRightEdge(workAreaRect);
+
+  var isFlushed = clientRightEdge === workAreaRightEdge;
   if (isFlushed) {
-    print(rect.x, flushedX);
     return Yanjing.States.NOOP;
+  } else {
+    print(
+      'Not flushed, client at ' + clientRightEdge +
+      ', needs to be ' + workAreaRightEdge
+    );
   }
 
   if (client.moveable) {
-    rect.x = flushedX;
+    rect.x = workAreaRightEdge - rect.width;
     client.geometry = rect;
     return Yanjing.States.DONE;
   }
@@ -158,20 +185,25 @@ Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
 
 /**
  * @param {object} client
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
   var rect = client.geometry;
   var clientWidth = rect.width;
-  var workspaceCenterX = workspace.workspaceWidth / 2;
+  var workAreaRect = Yanjing.getWorkAreaRect();
+  var workspaceCenterX = (workAreaRect.width / 2) + workAreaRect.x;
   var clientCenterX = rect.x + (clientWidth / 2);
   var isCentered = (
     clientCenterX - Yanjing.CENTER_MOE <= workspaceCenterX &&
     clientCenterX + Yanjing.CENTER_MOE >= workspaceCenterX
   );
   if (isCentered) {
-    print(workspaceCenterX, clientCenterX);
     return Yanjing.States.NOOP;
+  } else {
+    print(
+      'Not centered, client at ' + clientCenterX +
+      ' needs to be ' +  workspaceCenterX
+    );
   }
 
   if (client.moveable) {
@@ -188,7 +220,7 @@ Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
 /**
  * @param {object} client
  * @param {string} key
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.squish = function (client, key) {
   var dir = Yanjing.Dirs[key];
@@ -206,7 +238,7 @@ Yanjing.squish = function (client, key) {
 
 /**
  * @param {object} client
- * @return {number} Yanjing.States value
+ * @return {string} Yanjing.States value
  */
 Yanjing.yMax = function (client) {
   if (!client || !client.resizeable) {
@@ -214,11 +246,7 @@ Yanjing.yMax = function (client) {
   }
 
   // Work area for the active cliint, considers things like docks!
-  var workAreaRect = workspace.clientArea(
-    KWin.WorkArea,
-    workspace.activeClient
-  );
-
+  var workAreaRect = Yanjing.getWorkAreaRect();
   var rect = client.geometry;
   rect.y = workAreaRect.y
   rect.height = workAreaRect.height;

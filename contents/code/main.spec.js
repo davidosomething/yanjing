@@ -2,21 +2,27 @@
 // KWin Mocks
 // ===========================================================================
 
-global.print = jest.fn();
+global.print = jest.fn()//.mockImplementation((str) => console.error(str));
 global.registerShortcut = jest.fn();
 
 global.KWin = {
   WorkArea: 'WorkArea',
 };
 
+const RIGHT_SIDEBAR_WIDTH = 72;
+const SCREEN_LEFT = 64;
+const SCREEN_WIDTH = 1920 - RIGHT_SIDEBAR_WIDTH;
+
 const ClientRects = {
-  WorkArea: { x: 0, y: 32, width: 1920, height: 1080 - 32 - 32 },
+  WorkArea: {
+    x: SCREEN_LEFT,
+    y: 32,
+    width: SCREEN_WIDTH,
+    height: 1080 - 32 - 32
+  },
 };
 
 global.workspace = {
-  workspaceHeight: 1080,
-  workspaceWidth: 1920,
-
   /**
    * Return workspace minus docks!
    */
@@ -24,6 +30,8 @@ global.workspace = {
     return ClientRects[ClientAreaOption];
   })
 };
+
+const HALF_SCREEN = global.workspace.clientArea('WorkArea').width / 2;
 
 // ===========================================================================
 
@@ -41,9 +49,10 @@ it('calls registerShortcut in main', () => {
 });
 
 describe('sizeToWidth', () => {
-  it(`should return px value against ${global.workspace.workspaceWidth}`, () => {
-    expect(Yanjing.sizeToWidth(33.333)).toBeCloseTo(639.9936);
-    expect(Yanjing.sizeToWidth(50)).toBeCloseTo(global.workspace.workspaceWidth / 2);
+  it(`should return px value against work area width`, () => {
+    expect(Yanjing.sizeToWidth(33.333)).toBeCloseTo(615.99384);
+    expect(Yanjing.sizeToWidth(50))
+      .toBeCloseTo(HALF_SCREEN);
   });
 });
 
@@ -51,7 +60,7 @@ describe('widthToSizeIndex', () => {
   it(`should return size index relative to ${global.workspace.workspaceWidth}`, () => {
     expect(Yanjing.widthToSizeIndex(640))
       .toBe(Yanjing.Sizes.findIndex((s) => s === 100/3));
-    expect(Yanjing.widthToSizeIndex(global.workspace.workspaceWidth / 2))
+    expect(Yanjing.widthToSizeIndex(HALF_SCREEN))
       .toBe(Yanjing.Sizes.findIndex((s) => s === 50));
   });
 });
@@ -69,11 +78,11 @@ describe('getNextI', () => {
 
 describe('getNextWidth', () => {
   it(`should cycle width`, () => {
-    expect(Yanjing.getNextWidth(1440)).toBeCloseTo(1280, 0);
-    expect(Yanjing.getNextWidth(1280)).toBeCloseTo(960, 0);
-    expect(Yanjing.getNextWidth(960)).toBeCloseTo(640, 0);
-    expect(Yanjing.getNextWidth(640)).toBeCloseTo(480, 0);
-    expect(Yanjing.getNextWidth(480)).toBeCloseTo(1440, 0);
+    expect(Yanjing.getNextWidth(1440)).toBeCloseTo(1232, 0);
+    expect(Yanjing.getNextWidth(1280)).toBeCloseTo(924, 0);
+    expect(Yanjing.getNextWidth(960)).toBeCloseTo(616, 0);
+    expect(Yanjing.getNextWidth(640)).toBeCloseTo(462, 0);
+    expect(Yanjing.getNextWidth(480)).toBeCloseTo(1386, 0);
   });
 });
 
@@ -93,7 +102,7 @@ describe('cycle', () => {
     };
     Yanjing.cycle(client);
     expect(Yanjing.getNextWidth).toHaveBeenCalledTimes(1);
-    expect(client.geometry.width).toBeCloseTo(480, 0);
+    expect(client.geometry.width).toBeCloseTo(462, 0);
     Yanjing.getNextWidth.mockRestore();
   });
 });
@@ -102,7 +111,7 @@ describe('Move', () => {
   describe('Left', () => {
     it(`should return NOOP if already left`, () => {
       const client = {
-        geometry: { x: 0 },
+        geometry: { x: SCREEN_LEFT },
       };
       expect(Yanjing.Move[Yanjing.Dirs.Left](client))
         .toBe(Yanjing.States.NOOP);
@@ -124,20 +133,24 @@ describe('Move', () => {
       };
       const result = Yanjing.Move[Yanjing.Dirs.Left](client);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x).toBe(0);
+      expect(client.geometry.x).toBe(SCREEN_LEFT);
     });
   });
 
   describe('Right', () => {
     it(`should return NOOP if already right`, () => {
       const maximizedClient = {
-        geometry: { x: 0, width: 1920 },
+        geometry: {
+          x: SCREEN_LEFT,
+          width: SCREEN_WIDTH,
+          moveable: true,
+        },
       };
       expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedClient))
         .toBe(Yanjing.States.NOOP);
 
       const flushedClient = {
-        geometry: { x: 920, width: 1000 },
+        geometry: { x: 912, width: 1000 },
       };
       expect(Yanjing.Move[Yanjing.Dirs.Right](flushedClient))
         .toBe(Yanjing.States.NOOP);
@@ -159,20 +172,23 @@ describe('Move', () => {
       };
       const result = Yanjing.Move[Yanjing.Dirs.Right](client);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x).toBe(1820);
+      expect(client.geometry.x).toBe(1812);
     });
   });
 
   describe('Center', () => {
     it(`should return NOOP if already center`, () => {
       const maximizedClient = {
-        geometry: { x: 0, width: 1920 },
+        geometry: { x: SCREEN_LEFT, width: SCREEN_WIDTH },
       };
       expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedClient))
         .toBe(Yanjing.States.NOOP);
 
       const centeredClient = {
-        geometry: { x: 900, width: 120 },
+        geometry: {
+          x: SCREEN_LEFT + (SCREEN_WIDTH / 2) - (120 / 2),
+          width: 120
+        },
       };
       expect(Yanjing.Move[Yanjing.Dirs.Center](centeredClient))
         .toBe(Yanjing.States.NOOP);
@@ -194,7 +210,8 @@ describe('Move', () => {
       };
       const result = Yanjing.Move[Yanjing.Dirs.Center](client);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x).toBe(960-(100/2));
+      expect(client.geometry.x)
+        .toBe(SCREEN_LEFT + (SCREEN_WIDTH / 2) - (100/2));
     });
   });
 });
