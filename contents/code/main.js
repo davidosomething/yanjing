@@ -318,7 +318,7 @@ Yanjing.main = function () {
     '',
     function () {
       var client = workspace.activeClient;
-      Yanjing.squish(Yanjing.Dirs.Right);
+      Yanjing.squish(client, Yanjing.Dirs.Right);
     }
   );
 
