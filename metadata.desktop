@@ -21,3 +21,5 @@ X-KDE-PluginInfo-EnabledByDefault=true
 X-Plasma-API=javascript
 X-Plasma-MainScript=code/main.js
 
+# This file is generated from metadata.njk
+
