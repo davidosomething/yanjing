@@ -136,8 +136,8 @@ Yanjing.cycle = function (client, dir) {
 Yanjing.unmax = function (client) {
   // When you unmax a window it reverts geometry to pre max width and height
   if (typeof client.setMaximize === 'function') {
-    const VERTICAL = false;
-    const HORIZONTAL = false;
+    var VERTICAL = false;
+    var HORIZONTAL = false;
     var maxedRect = client.geometry;
     client.setMaximize(VERTICAL, HORIZONTAL);
 
