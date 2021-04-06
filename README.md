@@ -1,6 +1,8 @@
 # Yanjing
 
-KWin script to resize and move windows.
+KWin script to resize and move windows. Like Spectacle/Rectangle on mac.
+
+Available in the [KDE store](https://store.kde.org/p/1492899/)
 
 ## Commands 
 
