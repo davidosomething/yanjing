@@ -207,11 +207,6 @@ Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
   var isFlushed = clientRightEdge === workAreaRightEdge;
   if (isFlushed) {
     return Yanjing.States.NOOP;
-  } else {
-    print(
-      'Not flushed, client at ' + clientRightEdge +
-      ', needs to be ' + workAreaRightEdge
-    );
   }
 
   rect.x = workAreaRightEdge - rect.width;
@@ -239,11 +234,6 @@ Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
   );
   if (isCentered) {
     return Yanjing.States.NOOP;
-  } else {
-    print(
-      'Not centered, client at ' + clientCenterX +
-      ' needs to be ' +  workspaceCenterX
-    );
   }
 
   var distance = workspaceCenterX - clientCenterX;
