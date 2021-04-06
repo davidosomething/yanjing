@@ -112,6 +112,7 @@ describe('Move', () => {
     it(`should return NOOP if already left`, () => {
       const client = {
         geometry: { x: SCREEN_LEFT },
+        moveable: true,
       };
       expect(Yanjing.Move[Yanjing.Dirs.Left](client))
         .toBe(Yanjing.States.NOOP);
@@ -143,14 +144,15 @@ describe('Move', () => {
         geometry: {
           x: SCREEN_LEFT,
           width: SCREEN_WIDTH,
-          moveable: true,
         },
+        moveable: true,
       };
       expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedClient))
         .toBe(Yanjing.States.NOOP);
 
       const flushedClient = {
         geometry: { x: 912, width: 1000 },
+        moveable: true,
       };
       expect(Yanjing.Move[Yanjing.Dirs.Right](flushedClient))
         .toBe(Yanjing.States.NOOP);
@@ -180,6 +182,7 @@ describe('Move', () => {
     it(`should return NOOP if already center`, () => {
       const maximizedClient = {
         geometry: { x: SCREEN_LEFT, width: SCREEN_WIDTH },
+        moveable: true,
       };
       expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedClient))
         .toBe(Yanjing.States.NOOP);
@@ -189,6 +192,7 @@ describe('Move', () => {
           x: SCREEN_LEFT + (SCREEN_WIDTH / 2) - (120 / 2),
           width: 120
         },
+        moveable: true,
       };
       expect(Yanjing.Move[Yanjing.Dirs.Center](centeredClient))
         .toBe(Yanjing.States.NOOP);
@@ -240,5 +244,31 @@ describe('yMax', () => {
     expect(result).toBe(Yanjing.States.DONE);
     expect(client.geometry.y).toBe(ClientRects.WorkArea.y);
     expect(client.geometry.height).toBe(ClientRects.WorkArea.height);
+  });
+});
+
+describe('squish', () => {
+  it('should return ERROR if unknown key', () => {
+    expect(Yanjing.squish(null, 'nowhere')).toBe(Yanjing.States.ERROR);
+  });
+
+  it('should return ERROR if unable to move', () => {
+    const client = {
+      moveable: false,
+    };
+    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe(Yanjing.States.ERROR);
+  });
+
+  it('should cycle if did not move', () => {
+    const client = {
+      geometry: { x: SCREEN_LEFT },
+      moveable: true,
+    };
+    Yanjing.cycle = jest.fn().mockImplementation(() => 'ok1');
+    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe('ok1');
+    expect(Yanjing.cycle).toHaveBeenCalledTimes(1);
+    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe('ok1');
+    expect(Yanjing.cycle).toHaveBeenCalledTimes(2);
+    Yanjing.cycle.mockRestore();
   });
 });

@@ -108,7 +108,7 @@ Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(client) {
 };
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @param {string} dir 'Left'
  * @return {string} Yanjing.States value
  */
@@ -127,13 +127,55 @@ Yanjing.cycle = function (client, dir) {
   return after && after(client);
 };
 
+/**
+ * Unmaximize a window without changing size.
+ *
+ * @param {KWin::AbstractClient} client
+ * @return {KWin::AbstractClient} client
+ */
+Yanjing.unmax = function (client) {
+  // When you unmax a window it reverts geometry to pre max width and height
+  if (typeof client.setMaximize === 'function') {
+    const VERTICAL = false;
+    const HORIZONTAL = false;
+    var maxedRect = client.geometry;
+    client.setMaximize(VERTICAL, HORIZONTAL);
+
+    // Restore previous maximized size, but now unmaxed so has drop shadows
+    // and window borders.
+    client.geometry = maxedRect;
+  }
+  return client;
+};
+
+/**
+ * @param {KWin::AbstractClient} client
+ * @param {function} moveCb called with client
+ * @return {string} Yanjing.States value
+ */
+Yanjing.beforeMove = function (client) {
+  if (!client.moveable) {
+    return Yanjing.States.ERROR;
+  }
+
+  // Horizonatally unmax a client before moving, since you shouldn't be able
+  // move a maximized window.
+  // setMaximize is documented at https://develop.kde.org/docs/plasma/kwin/api/
+  Yanjing.unmax(client);
+  return Yanjing.States.DONE;
+};
+
 Yanjing.Move = {};
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
+  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+    return Yanjing.States.ERROR;
+  }
+
   var rect = client.geometry;
   var workAreaLeftEdge = Yanjing.getWorkAreaRect().x;
   var isFlushed = rect.x === workAreaLeftEdge;
@@ -141,22 +183,21 @@ Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
     return Yanjing.States.NOOP;
   }
 
-  if (client.moveable) {
-    var rect = client.geometry;
-    rect.x = workAreaLeftEdge;
-    client.geometry = rect;
-    return Yanjing.States.DONE;
-  }
-
-  print('Could not move window left');
-  return Yanjing.States.ERROR;
+  var rect = client.geometry;
+  rect.x = workAreaLeftEdge;
+  client.geometry = rect;
+  return Yanjing.States.DONE;
 };
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
+  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+    return Yanjing.States.ERROR;
+  }
+
   var rect = client.geometry;
   var clientRightEdge = Yanjing.getRightEdge(rect);
 
@@ -173,21 +214,20 @@ Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
     );
   }
 
-  if (client.moveable) {
-    rect.x = workAreaRightEdge - rect.width;
-    client.geometry = rect;
-    return Yanjing.States.DONE;
-  }
-
-  print('Could not move window right');
-  return Yanjing.States.ERROR;
+  rect.x = workAreaRightEdge - rect.width;
+  client.geometry = rect;
+  return Yanjing.States.DONE;
 };
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @return {string} Yanjing.States value
  */
 Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
+  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+    return Yanjing.States.ERROR;
+  }
+
   var rect = client.geometry;
   var clientWidth = rect.width;
   var workAreaRect = Yanjing.getWorkAreaRect();
@@ -206,19 +246,14 @@ Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
     );
   }
 
-  if (client.moveable) {
-    var distance = workspaceCenterX - clientCenterX;
-    rect.x = rect.x + distance;
-    client.geometry = rect;
-    return Yanjing.States.DONE;
-  }
-
-  print('Could not center window');
-  return Yanjing.States.ERROR;
+  var distance = workspaceCenterX - clientCenterX;
+  rect.x = rect.x + distance;
+  client.geometry = rect;
+  return Yanjing.States.DONE;
 };
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @param {string} key
  * @return {string} Yanjing.States value
  */
@@ -231,13 +266,15 @@ Yanjing.squish = function (client, key) {
   }
 
   if (move(client) === Yanjing.States.NOOP) {
-    print('Client already positioned');
     return Yanjing.cycle(client, dir);
   }
+
+  print('Failed to move ' + dir);
+  return Yanjing.States.ERROR;
 };
 
 /**
- * @param {object} client
+ * @param {KWin::AbstractClient} client
  * @return {string} Yanjing.States value
  */
 Yanjing.yMax = function (client) {
