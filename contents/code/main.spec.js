@@ -3,6 +3,11 @@
 // ===========================================================================
 
 global.print = jest.fn()//.mockImplementation((str) => console.error(str));
+
+global.readConfig = jest.fn().mockImplementation(function (key, defaults) {
+  return defaults;
+});
+
 global.registerShortcut = jest.fn();
 
 global.KWin = {
@@ -48,6 +53,13 @@ it('calls registerShortcut in main', () => {
   expect(global.registerShortcut).toHaveBeenCalledTimes(6);
 });
 
+describe('sanitizeSizes', () => {
+  it('returns array of filtered floats', () => {
+    expect(Yanjing.sanitizeSizes('0, 5, 10, x, 111.111, 0, 222.333'))
+      .toEqual([5, 10, 111.111, 222.333]);
+  });
+});
+
 describe('sizeToWidth', () => {
   it(`should return px value against work area width`, () => {
     expect(Yanjing.sizeToWidth(33.333)).toBeCloseTo(615.99384);
@@ -59,7 +71,7 @@ describe('sizeToWidth', () => {
 describe('widthToSizeIndex', () => {
   it(`should return size index relative to ${global.workspace.workspaceWidth}`, () => {
     expect(Yanjing.widthToSizeIndex(640))
-      .toBe(Yanjing.Sizes.findIndex((s) => s === 100/3));
+      .toBe(Yanjing.Sizes.findIndex((s) => s === 33.3333));
     expect(Yanjing.widthToSizeIndex(HALF_SCREEN))
       .toBe(Yanjing.Sizes.findIndex((s) => s === 50));
   });

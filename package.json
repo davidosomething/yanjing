@@ -13,14 +13,15 @@
   "scripts": {
     "test": "jest",
     "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
+    "restartplasma": "kquitapp5 plasmashell; kstart5 plasmashell",
     "kwin:is_installed": "plasmapkg2 --type kwinscript --show yanjing",
     "kwin:install": "plasmapkg2 --type kwinscript --install .",
     "kwin:upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "kwin:uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
-    "build": "mkdir -p build && node scripts/build.js > build/metadata.desktop && desktop-file-validate build/metadata.desktop && cp build/metadata.desktop ./",
+    "start": "npm run --silent build && npm run --silent kwin:is_installed 2>/dev/null && { npm run --silent kwin:upgrade; echo UPGRADED; } || { npm run --silent kwin:install && echo INSTALLED; }",
+    "build": "node scripts/build.js > metadata.desktop",
     "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop",
-    "version": "npm run --silent package && git add -- metadata.desktop yanjing.kwinscript",
-    "start": "npm run --silent build && npm run --silent kwin:is_installed 2>/dev/null && { npm run --silent kwin:upgrade; echo UPGRADED; } || { npm run --silent kwin:install && echo INSTALLED; }"
+    "version": "npm run --silent package && git add -- metadata.desktop yanjing.kwinscript"
   },
   "author": {
     "name": "David O'Trakoun",

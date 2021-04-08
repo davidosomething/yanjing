@@ -1,10 +1,15 @@
 [Desktop Entry]
+Encoding=UTF-8
 Name=yanjing
 Comment=Window size and movement
 Icon=preferences-system-windows-script-test
 Type=Service
 
-X-KDE-ServiceTypes=KWin/Script
+X-KDE-ServiceTypes=KWin/Script,KCModule
+X-Plasma-API=javascript
+X-Plasma-MainScript=code/main.js
+
+X-KDE-PluginInfo-EnabledByDefault=true
 
 X-KDE-PluginInfo-Name=yanjing
 X-KDE-PluginInfo-Version=4.1.1
@@ -15,10 +20,7 @@ X-KDE-PluginInfo-Website=https://github.com/davidosomething/yanjing
 X-KDE-PluginInfo-Email=me@davidosomething.com
 X-KDE-PluginInfo-License=MIT
 
-X-KDE-PluginInfo-EnabledByDefault=true
-
-X-Plasma-API=javascript
-X-Plasma-MainScript=code/main.js
-
-# This file is generated from metadata.njk
+X-KDE-Library=kwin/effects/configs/kcm_kwin4_genericscripted
+X-KDE-PluginKeyword=yanjing
+X-KDE-ParentComponents=yanjing
 

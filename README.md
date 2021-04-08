@@ -2,7 +2,24 @@
 
 KWin script to resize and move windows. Like Spectacle/Rectangle on mac.
 
+## Installation
+
 Available in the [KDE store](https://store.kde.org/p/1492899/)
+
+## Configuration
+
+You can customize the sizes this script cycles through by setting them in your
+kwin config using this command:
+
+```sh
+kwriteconfig5 --file kwinrc --group Script-yanjing --key sizes "50,66,34,100"
+qdbus org.kde.KWin /KWin reconfigure
+```
+
+This will write the sizes to your `~/.config/kwinrc` file under the
+`[Script-yanjing]` group.
+You may need to disable and re-enable the plugin in
+`System Settings > KWin Scripts` for the sizes to be read.
 
 ## Commands 
 

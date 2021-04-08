@@ -12,14 +12,38 @@ Yanjing.States = {
   ERROR: 'ERROR',
 };
 
-// Percent of screen to fill
-Yanjing.Sizes = [
-  75,
-  100 / 3 * 2,
-  50,
-  100 / 3,
-  25,
-];
+/**
+ * @param {string} sizesStringList comma separated
+ * @return {number[]} No zero/falsies
+ */
+Yanjing.sanitizeSizes = function (sizesStringList) {
+  return (sizesStringList
+    .split(',')
+    .map(function ensureFloat(v) {
+      return parseFloat(v); // also serves to trim()
+    })
+    .filter(Boolean) // remove 0 and NaN
+  );
+}
+
+var DEFAULT_SIZES = '75,66.6666,50,33.3333,25';
+
+var configSizes = [];
+var configSizesString = '';
+try {
+  var configSizesString = readConfig('sizes', '').toString();
+  configSizes = Yanjing.sanitizeSizes(configSizesString);
+} catch (err) {
+  print(err);
+}
+
+if (configSizes.length > 0) {
+  Yanjing.Sizes = configSizes;
+  print('Using custom sizes', configSizesString);
+} else {
+  Yanjing.Sizes = Yanjing.sanitizeSizes(DEFAULT_SIZES);
+  print('Using DEFAULT_SIZES', DEFAULT_SIZES);
+}
 
 Yanjing.Dirs = {
   Left: 'Left',
@@ -123,6 +147,7 @@ Yanjing.cycle = function (client, dir) {
   rect.width = nextWidth;
   client.geometry = rect;
 
+  // Move again after cycle to fix reposition due to resize
   var after = Yanjing.AfterCycle[dir];
   return after && after(client);
 };
