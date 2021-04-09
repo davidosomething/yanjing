@@ -5,7 +5,7 @@ Comment=Window size and movement
 Icon=preferences-system-windows-script-test
 Type=Service
 
-X-KDE-ServiceTypes=KWin/Script,KCModule
+X-KDE-ServiceTypes=KWin/Script
 X-Plasma-API=javascript
 X-Plasma-MainScript=code/main.js
 
