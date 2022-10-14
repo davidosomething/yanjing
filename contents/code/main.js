@@ -26,7 +26,7 @@ Yanjing.sanitizeSizes = function (sizesStringList) {
   );
 }
 
-var DEFAULT_SIZES = '75,66.6666,60,50,40,33.3333,25';
+var DEFAULT_SIZES = '75,66.6666,50,33.3333,25';
 
 var configSizes = [];
 var configSizesString = '';
