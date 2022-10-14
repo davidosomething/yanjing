@@ -90,7 +90,7 @@ describe('getNextI', () => {
 
 describe('getNextWidth', () => {
   it(`should cycle width`, () => {
-    expect(Yanjing.getNextWidth(1440)).toBeCloseTo(1232, 0);
+    expect(Yanjing.getNextWidth(1440)).toBeCloseTo(1231, 0);
     expect(Yanjing.getNextWidth(1280)).toBeCloseTo(924, 0);
     expect(Yanjing.getNextWidth(960)).toBeCloseTo(616, 0);
     expect(Yanjing.getNextWidth(640)).toBeCloseTo(462, 0);

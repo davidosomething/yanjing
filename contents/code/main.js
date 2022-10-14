@@ -117,7 +117,7 @@ Yanjing.getNextWidth = function (clientWidth) {
   var nextI = Yanjing.getNextI(sizeI); // would go left 1 or center/right to 3
   var nextSize = Yanjing.Sizes[nextI]; // 33.3333 or 66.6666
   var nextWidth = Yanjing.sizeToWidth(nextSize); // whatever px value, e.g. 359.9
-  return nextWidth;
+  return parseInt(nextWidth, 10);
 };
 
 Yanjing.AfterCycle = {};
