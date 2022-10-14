@@ -16,7 +16,7 @@
     "ServiceTypes": [
       "KWin/Script"
     ],
-    "Version": "6.0.0",
+    "Version": "6.0.1",
     "Website": "https://github.com/davidosomething/yanjing"
   },
   "X-Plasma-API": "javascript",
