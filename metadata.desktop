@@ -1,26 +1,24 @@
-[Desktop Entry]
-Encoding=UTF-8
-Name=yanjing
-Comment=Window size and movement
-Icon=preferences-system-windows-script-test
-Type=Service
-
-X-KDE-ServiceTypes=KWin/Script
-X-Plasma-API=javascript
-X-Plasma-MainScript=code/main.js
-
-X-KDE-PluginInfo-EnabledByDefault=true
-
-X-KDE-PluginInfo-Name=yanjing
-X-KDE-PluginInfo-Version=5.0.1
-X-KDE-PluginInfo-Depends=
-
-X-KDE-PluginInfo-Author=David O'Trakoun
-X-KDE-PluginInfo-Website=https://github.com/davidosomething/yanjing
-X-KDE-PluginInfo-Email=me@davidosomething.com
-X-KDE-PluginInfo-License=MIT
-
-X-KDE-Library=kwin/effects/configs/kcm_kwin4_genericscripted
-X-KDE-PluginKeyword=yanjing
-X-KDE-ParentComponents=yanjing
-
+{
+  "KPlugin": {
+    "Authors": [
+      {
+        "Email": "me@davidosomething.com",
+        "Name": "David O'Trakoun"
+      }
+    ],
+    "Category": "Window Management",
+    "Dependencies": [],
+    "EnabledByDefault": true,
+    "Icon": "preferences-system-windows-script-test",
+    "Id": "yanjing",
+    "License": "MIT",
+    "Name": "yanjing",
+    "ServiceTypes": [
+      "KWin/Script"
+    ],
+    "Version": "5.0.1",
+    "Website": "https://github.com/davidosomething/yanjing"
+  },
+  "X-Plasma-API": "javascript",
+  "X-Plasma-MainScript": "code/main.js"
+}

@@ -12,14 +12,14 @@
   "directories": {},
   "scripts": {
     "test": "jest",
-    "debugger": "qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
+    "debugger": "plasma-interactiveconsole --kwin || qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.showInteractiveKWinConsole",
     "restartplasma": "kquitapp5 plasmashell; kstart5 plasmashell",
     "kwin:is_installed": "plasmapkg2 --type kwinscript --show yanjing",
     "kwin:install": "plasmapkg2 --type kwinscript --install .",
     "kwin:upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "kwin:uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
     "start": "npm run --silent build && npm run --silent kwin:is_installed 2>/dev/null && { npm run --silent kwin:upgrade; echo UPGRADED; } || { npm run --silent kwin:install && echo INSTALLED; }",
-    "build": "node scripts/build.js > metadata.desktop",
+    "build": "node output-metadata.js > metadata.desktop",
     "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop",
     "version": "npm run --silent package && git add -- metadata.desktop yanjing.kwinscript"
   },
@@ -30,7 +30,6 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "jest": "^26.6.3",
-    "nunjucks": "^3.2.3"
+    "jest": "^29.1.2"
   }
 }

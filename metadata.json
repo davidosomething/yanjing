@@ -1,0 +1,26 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "me@davidosomething.com",
+                "Name": "David O'Trakoun"
+            }
+        ],
+        "Category": "Window Management",
+        "Dependencies": [
+        ],
+        "Description": "Window size and movement",
+        "EnabledByDefault": true,
+        "Icon": "preferences-system-windows-script-test",
+        "Id": "yanjing",
+        "License": "MIT",
+        "Name": "yanjing",
+        "ServiceTypes": [
+            "KWin/Script"
+        ],
+        "Version": "6.0.0",
+        "Website": "https://github.com/davidosomething/yanjing"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}
