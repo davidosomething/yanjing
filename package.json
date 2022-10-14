@@ -19,9 +19,9 @@
     "kwin:upgrade": "plasmapkg2 --type kwinscript --upgrade .",
     "kwin:uninstall": "plasmapkg2 --type kwinscript --remove yanjing",
     "start": "npm run --silent build && npm run --silent kwin:is_installed 2>/dev/null && { npm run --silent kwin:upgrade; echo UPGRADED; } || { npm run --silent kwin:install && echo INSTALLED; }",
-    "build": "node output-metadata.js > metadata.desktop",
-    "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.desktop",
-    "version": "npm run --silent package && git add -- metadata.desktop yanjing.kwinscript"
+    "build": "node output-metadata.js > metadata.json",
+    "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.json",
+    "version": "npm run --silent package && git add -- metadata.json yanjing.kwinscript"
   },
   "author": {
     "name": "David O'Trakoun",
