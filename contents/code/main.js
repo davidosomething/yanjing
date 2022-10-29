@@ -280,12 +280,15 @@ Yanjing.squish = function (client, key) {
     return Yanjing.States.ERROR;
   }
 
-  if (move(client) === Yanjing.States.NOOP) {
+  var result = move(client);
+  if (result === Yanjing.States.NOOP) {
     return Yanjing.cycle(client, dir);
   }
 
-  print('Failed to move ' + dir);
-  return Yanjing.States.ERROR;
+  if (result === Yanjing.States.ERROR) {
+    print('Failed to move ' + dir);
+  }
+  return result;
 };
 
 /**
