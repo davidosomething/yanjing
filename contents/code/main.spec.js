@@ -92,7 +92,11 @@ describe('getNextWidth', () => {
   it(`should cycle width`, () => {
     expect(Yanjing.getNextWidth(1440)).toBeCloseTo(1231, 0);
     expect(Yanjing.getNextWidth(1280)).toBeCloseTo(924, 0);
-    expect(Yanjing.getNextWidth(960)).toBeCloseTo(616, 0);
+
+    // The rounding depends on plasma version
+    expect(Yanjing.getNextWidth(960)).toBeGreaterThan(614);
+    expect(Yanjing.getNextWidth(960)).toBeLessThan(617);
+
     expect(Yanjing.getNextWidth(640)).toBeCloseTo(462, 0);
     expect(Yanjing.getNextWidth(480)).toBeCloseTo(1386, 0);
   });
