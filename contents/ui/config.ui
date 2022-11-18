@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+	<class>KWin::YanjingConfigForm</class>
+	<widget class="QWidget" name="KWin::YanjingConfigForm">
+		<property name="geometry">
+			<rect>
+				<x>0</x>
+				<y>0</y>
+				<width>480</width>
+				<height>320</height>
+			</rect>
+		</property>
+		<property name="windowTitle">
+			<string>Yanjing</string>
+		</property>
+		<layout class="QFormLayout" name="formLayout">
+			<item row="1" column="0">
+				<layout class="QHBoxLayout" name="layout1">
+					<item>
+						<widget class="QLabel" name="labelSizes">
+							<property name="text">
+								<string>Sizes, float, comma sep</string>
+							</property>
+						</widget>
+					</item>
+					<item>
+						<widget class="QLineEdit" name="kcfg_sizes">
+							<property name="toolTip">
+								<string>Comma separated window size percentages, e.g. "66.6666, 50, 25"</string>
+							</property>
+							<property name="statusTip">
+								<string>Window width percentages</string>
+							</property>
+							<property name="whatsThis">
+								<string>Window width percentages</string>
+							</property>
+							<property name="text">
+								<string>75,66.6666,50,33.3333,25</string>
+							</property>
+							<property name="placeholderText">
+								<string>e.g. 75,66.6666,50,33.3333,25</string>
+							</property>
+						</widget>
+					</item>
+				</layout>
+			</item>
+		</layout>
+	</widget>
+	<resources />
+	<connections />
+</ui>

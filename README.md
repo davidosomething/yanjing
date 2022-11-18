@@ -8,6 +8,8 @@ Available in the [KDE store](https://store.kde.org/p/1492899/)
 
 ## Configuration
 
+### Via command-line/settings file
+
 You can customize the sizes this script cycles through by setting them in your
 kwin config using this command:
 
@@ -20,6 +22,24 @@ This will write the sizes to your `~/.config/kwinrc` file under the
 `[Script-yanjing]` group.
 You may need to disable and re-enable the plugin in
 `System Settings > KWin Scripts` for the sizes to be read.
+
+### Via gui
+
+The sizes can be changed by using the settings button in `System Settings
+> KWin Scripts`
+
+![settings screenshot](meta/settings.png)
+
+To enable this menu you may need to link the script metadata to kservices5:
+
+```sh
+mkdir -p ~/.local/share/kservices5/
+ln -s ~/.local/share/kwin/scripts/yanjing/metadata.desktop ~/.local/share/kservices5/yanjing.desktop
+```
+
+Why? See this [issue](https://github.com/faho/kwin-tiling/issues/79#issuecomment-311465357)
+
+Restarting plasma afterwards in recommended.
 
 ## Commands 
 
