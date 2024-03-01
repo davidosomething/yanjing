@@ -17,32 +17,28 @@ Yanjing.States = {
  * @return {number[]} No zero/falsies
  */
 Yanjing.sanitizeSizes = function (sizesStringList) {
-  return (sizesStringList
+  return sizesStringList
     .split(',')
     .map(function ensureFloat(v) {
       return parseFloat(v); // also serves to trim()
     })
-    .filter(Boolean) // remove 0 and NaN
-  );
-}
+    .filter(Boolean); // remove 0 and NaN
+};
 
 var DEFAULT_SIZES = '75,66.6666,50,33.3333,25';
 
 var configSizes = [];
 var configSizesString = '';
 try {
-  var configSizesString = readConfig('sizes', '').toString();
+  var configSizesString = readConfig('sizes', DEFAULT_SIZES).toString();
   configSizes = Yanjing.sanitizeSizes(configSizesString);
 } catch (err) {
-  print(err);
+  print('[yanjing] ' + err);
 }
 
 if (configSizes.length > 0) {
   Yanjing.Sizes = configSizes;
-  print('Using custom sizes', configSizesString);
-} else {
-  Yanjing.Sizes = Yanjing.sanitizeSizes(DEFAULT_SIZES);
-  print('Using DEFAULT_SIZES', DEFAULT_SIZES);
+  print('[yanjing] Using sizes', configSizesString);
 }
 
 Yanjing.Dirs = {
@@ -58,7 +54,7 @@ Yanjing.getWorkAreaRect = function () {
   return workspace.clientArea(
     KWin.WorkArea,
     workspace.activeScreen,
-    workspace.currentDesktop
+    workspace.currentDesktop,
   );
 };
 
@@ -75,7 +71,7 @@ Yanjing.getRightEdge = function (rect) {
  * @return {number} width e.g. 359.9
  */
 Yanjing.sizeToWidth = function (size) {
-  return size / 100 * Yanjing.getWorkAreaRect().width;
+  return (size / 100) * Yanjing.getWorkAreaRect().width;
 };
 
 /**
@@ -85,7 +81,9 @@ Yanjing.sizeToWidth = function (size) {
  */
 Yanjing.widthToSizeIndex = function (clientWidth) {
   // E.g. if window is 650px and screen is 1080 we'd get 33
-  var intWidthPercent = Math.round(clientWidth / Yanjing.getWorkAreaRect().width * 100);
+  var intWidthPercent = Math.round(
+    (clientWidth / Yanjing.getWorkAreaRect().width) * 100,
+  );
 
   var smallestDiff = 9999;
   var smallestI = 0;
@@ -121,7 +119,7 @@ Yanjing.getNextWidth = function (clientWidth) {
 };
 
 Yanjing.AfterCycle = {};
-Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(client) {
+Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(_client) {
   return Yanjing.States.DONE;
 };
 Yanjing.AfterCycle[Yanjing.Dirs.Center] = function afterCycleCenter(client) {
@@ -251,12 +249,11 @@ Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
   var rect = client.geometry;
   var clientWidth = rect.width;
   var workAreaRect = Yanjing.getWorkAreaRect();
-  var workspaceCenterX = (workAreaRect.width / 2) + workAreaRect.x;
-  var clientCenterX = rect.x + (clientWidth / 2);
-  var isCentered = (
+  var workspaceCenterX = workAreaRect.width / 2 + workAreaRect.x;
+  var clientCenterX = rect.x + clientWidth / 2;
+  var isCentered =
     clientCenterX - Yanjing.CENTER_MOE <= workspaceCenterX &&
-    clientCenterX + Yanjing.CENTER_MOE >= workspaceCenterX
-  );
+    clientCenterX + Yanjing.CENTER_MOE >= workspaceCenterX;
   if (isCentered) {
     return Yanjing.States.NOOP;
   }
@@ -276,7 +273,7 @@ Yanjing.squish = function (client, key) {
   var dir = Yanjing.Dirs[key];
   var move = Yanjing.Move[key];
   if (!move || !dir) {
-    print('Unrecognized command');
+    print('[yanjing] Unrecognized command');
     return Yanjing.States.ERROR;
   }
 
@@ -286,7 +283,7 @@ Yanjing.squish = function (client, key) {
   }
 
   if (result === Yanjing.States.ERROR) {
-    print('Failed to move ' + dir);
+    print('[yanjing] Failed to move ' + dir);
   }
   return result;
 };
@@ -300,10 +297,10 @@ Yanjing.yMax = function (client) {
     return Yanjing.States.ERROR;
   }
 
-  // Work area for the active cliint, considers things like docks!
+  // Work area for the active client, considers things like docks!
   var workAreaRect = Yanjing.getWorkAreaRect();
   var rect = client.geometry;
-  rect.y = workAreaRect.y
+  rect.y = workAreaRect.y;
   rect.height = workAreaRect.height;
   client.geometry = rect;
   return Yanjing.States.DONE;
@@ -317,7 +314,7 @@ Yanjing.main = function () {
     function () {
       var client = workspace.activeClient;
       Yanjing.squish(client, Yanjing.Dirs.Left);
-    }
+    },
   );
 
   registerShortcut(
@@ -327,7 +324,7 @@ Yanjing.main = function () {
     function () {
       var client = workspace.activeClient;
       Yanjing.squish(client, Yanjing.Dirs.Center);
-    }
+    },
   );
 
   registerShortcut(
@@ -337,7 +334,7 @@ Yanjing.main = function () {
     function () {
       var client = workspace.activeClient;
       Yanjing.squish(client, Yanjing.Dirs.Right);
-    }
+    },
   );
 
   registerShortcut(
@@ -348,7 +345,7 @@ Yanjing.main = function () {
       var client = workspace.activeClient;
       Yanjing.yMax(client);
       Yanjing.squish(client, Yanjing.Dirs.Left);
-    }
+    },
   );
 
   registerShortcut(
@@ -359,7 +356,7 @@ Yanjing.main = function () {
       var client = workspace.activeClient;
       Yanjing.yMax(client);
       Yanjing.squish(client, Yanjing.Dirs.Center);
-    }
+    },
   );
 
   registerShortcut(
@@ -370,7 +367,7 @@ Yanjing.main = function () {
       var client = workspace.activeClient;
       Yanjing.yMax(client);
       Yanjing.squish(client, Yanjing.Dirs.Right);
-    }
+    },
   );
 };
 
