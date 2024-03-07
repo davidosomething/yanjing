@@ -14,11 +14,13 @@
     "Id": "yanjing",
     "License": "MIT",
     "Name": "yanjing",
-    "ServiceTypes": ["KWin/Script"],
+    "ServiceTypes": [
+      "KWin/Script"
+    ],
     "Version": "7.0.0",
     "Website": "https://github.com/davidosomething/yanjing"
   },
-  "X-KDE-ConfigModule": "kwin/effects/configs/kcm_kwin4_genericscripted",
   "X-Plasma-API": "javascript",
+  "X-Plasma-API-Minimum-Version": "6.0",
   "X-Plasma-MainScript": "code/main.js"
 }
