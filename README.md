@@ -21,26 +21,26 @@ This will write the sizes to your `~/.config/kwinrc` file under the
 You may need to disable and re-enable the plugin in
 `System Settings > KWin Scripts` for the sizes to be read.
 
-## Commands 
+## Commands
 
 - Yanjing LEFT - `no default`
-    - Vertically maximize, flush the window to the LEFT side of the screen, or
-      resize width if already flushed.
+  - Vertically maximize, flush the window to the LEFT side of the screen, or
+    resize width if already flushed.
 - Yanjing CENTER - `no default`
-    - Vertically maximize, center window horizontally, or resize width if
-      already centered. Centering allows a 2px margin of error.
+  - Vertically maximize, center window horizontally, or resize width if
+    already centered. Centering allows a 2px margin of error.
 - Yanjing RIGHT - `no default`
-    - Vertically maximize, flush the window to the RIGHT side of the screen,
-      or resize width if already flushed.
+  - Vertically maximize, flush the window to the RIGHT side of the screen,
+    or resize width if already flushed.
 - Yanjing yMax + LEFT - `ctrl-shift-meta-a`
-    - Vertically maximize, flush the window to the LEFT side of the screen, or
-      resize width if already flushed.
-- Yanjing yMax + CENTER - `ctrl-shift-meta-x` - 
-    - Vertically maximize, center window horizontally, or resize width if
-      already centered. Centering allows a 2px margin of error.
+  - Vertically maximize, flush the window to the LEFT side of the screen, or
+    resize width if already flushed.
+- Yanjing yMax + CENTER - `ctrl-shift-meta-x` -
+  - Vertically maximize, center window horizontally, or resize width if
+    already centered. Centering allows a 2px margin of error.
 - Yanjing yMax + RIGHT - `ctrl-shift-meta-d`
-    - Vertically maximize, flush the window to the RIGHT side of the screen,
-      or resize width if already flushed.
+  - Vertically maximize, flush the window to the RIGHT side of the screen,
+    or resize width if already flushed.
 
 ### Resizing logic
 
