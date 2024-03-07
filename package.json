@@ -23,7 +23,7 @@
     "kwin:is_installed": "kpackagetool6 --type=KWin/Script --show yanjing",
     "kwin:install": "kpackagetool6 --type=KWin/Script --install .",
     "kwin:upgrade": "kpackagetool6 --type=KWin/Script --upgrade .",
-    "kwin:uninstall": "kpackagetool6 --type=KWin/Script --remove yanjing",
+    "kwin:uninstall": "kpackagetool6 --type=KWin/Script --remove yanjing && qdbus org.kde.kglobalaccel /component/kwin cleanUp",
     "start": "npm run --silent build && npm run --silent kwin:is_installed && { npm run --silent kwin:upgrade; echo UPGRADED; } || { npm run --silent kwin:install && echo INSTALLED; }",
     "build": "node output-metadata.js > metadata.json",
     "package": "npm run --silent build && zip --exclude \\*.spec.js --recurse-paths yanjing.kwinscript contents/ LICENSE metadata.json",
