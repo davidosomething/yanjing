@@ -1,4 +1,5 @@
 {
+  "KPackageStructure": "KWin/Script",
   "KPlugin": {
     "Authors": [
       {
@@ -16,9 +17,10 @@
     "ServiceTypes": [
       "KWin/Script"
     ],
-    "Version": "6.1.2",
+    "Version": "7.0.0",
     "Website": "https://github.com/davidosomething/yanjing"
   },
   "X-Plasma-API": "javascript",
+  "X-Plasma-API-Minimum-Version": "6.0",
   "X-Plasma-MainScript": "code/main.js"
 }

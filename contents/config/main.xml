@@ -4,7 +4,10 @@
 	xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
 	http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
 	<kcfgfile name=""/>
-	<group name="">
+	<group name="General">
+		<entry name="maxHeightPercent" type="Int">
+			<default>100</default>
+		</entry>
 		<entry name="sizes" type="StringList">
 			<default>75,66.6666,50,33.3333,25</default>
 		</entry>
