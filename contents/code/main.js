@@ -1,8 +1,8 @@
 var Yanjing = {};
 
 /**
- * Margin of Error in PX for centering a client. If client's center is within
- * this PX of workspace center, consider the client centered.
+ * Margin of Error in PX for centering a window. If window's center is within
+ * this PX of workspace center, consider the window centered.
  */
 Yanjing.CENTER_MOE = 2;
 
@@ -75,14 +75,14 @@ Yanjing.sizeToWidth = function (size) {
 };
 
 /**
- * @param {number} clientWidth of client e.g. 359.9
+ * @param {number} windowWidth of window e.g. 359.9
  * @return {number} index in Sizes array. The size is the nearest size to the
- * client width in relation to the workspace width.
+ * window width in relation to the workspace width.
  */
-Yanjing.widthToSizeIndex = function (clientWidth) {
+Yanjing.widthToSizeIndex = function (windowWidth) {
   // E.g. if window is 650px and screen is 1080 we'd get 33
   var intWidthPercent = Math.round(
-    (clientWidth / Yanjing.getWorkAreaRect().width) * 100,
+    (windowWidth / Yanjing.getWorkAreaRect().width) * 100,
   );
 
   var smallestDiff = 9999;
@@ -106,12 +106,12 @@ Yanjing.getNextI = function (i) {
 };
 
 /**
- * @param {number} clientWidth like 500 (px)
+ * @param {number} windowWidth like 500 (px)
  * @return {number} width like 333 (px)
  */
-Yanjing.getNextWidth = function (clientWidth) {
-  // e.g. 2 is 50, meaning the client is roughly 50% of the workspace width
-  var sizeI = Yanjing.widthToSizeIndex(clientWidth);
+Yanjing.getNextWidth = function (windowWidth) {
+  // e.g. 2 is 50, meaning the window is roughly 50% of the workspace width
+  var sizeI = Yanjing.widthToSizeIndex(windowWidth);
   var nextI = Yanjing.getNextI(sizeI); // would go left 1 or center/right to 3
   var nextSize = Yanjing.Sizes[nextI]; // 33.3333 or 66.6666
   var nextWidth = Yanjing.sizeToWidth(nextSize); // whatever px value, e.g. 359.9
@@ -119,157 +119,157 @@ Yanjing.getNextWidth = function (clientWidth) {
 };
 
 Yanjing.AfterCycle = {};
-Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(_client) {
+Yanjing.AfterCycle[Yanjing.Dirs.Left] = function afterCycleLeft(_win) {
   return Yanjing.States.DONE;
 };
-Yanjing.AfterCycle[Yanjing.Dirs.Center] = function afterCycleCenter(client) {
-  return Yanjing.Move[Yanjing.Dirs.Center](client);
+Yanjing.AfterCycle[Yanjing.Dirs.Center] = function afterCycleCenter(win) {
+  return Yanjing.Move[Yanjing.Dirs.Center](win);
 };
-Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(client) {
-  return Yanjing.Move[Yanjing.Dirs.Right](client);
+Yanjing.AfterCycle[Yanjing.Dirs.Right] = function afterCycleRight(win) {
+  return Yanjing.Move[Yanjing.Dirs.Right](win);
 };
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @param {string} dir 'Left'
  * @return {string} Yanjing.States value
  */
-Yanjing.cycle = function (client, dir) {
-  if (!client.resizeable) {
+Yanjing.cycle = function (win, dir) {
+  if (!win.resizeable) {
     return Yanjing.States.ERROR;
   }
 
-  var rect = client.geometry; // { width, height, x, y }
-  var clientWidth = rect.width; // 500
-  var nextWidth = Yanjing.getNextWidth(clientWidth);
+  var rect = win.frameGeometry; // { width, height, x, y }
+  var winWidth = rect.width; // 500
+  var nextWidth = Yanjing.getNextWidth(winWidth);
   rect.width = nextWidth;
-  client.geometry = rect;
+  win.frameGeometry = rect;
 
   // Move again after cycle to fix reposition due to resize
   var after = Yanjing.AfterCycle[dir];
-  return after && after(client);
+  return after && after(win);
 };
 
 /**
  * Unmaximize a window without changing size.
  *
- * @param {KWin::AbstractClient} client
- * @return {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
+ * @return {KWin::AbstractClient} win
  */
-Yanjing.unmax = function (client) {
-  // When you unmax a window it reverts geometry to pre max width and height
-  if (typeof client.setMaximize === 'function') {
+Yanjing.unmax = function (win) {
+  // When you unmax a window it reverts frameGeometry to pre max width and height
+  if (typeof win.setMaximize === 'function') {
     var VERTICAL = false;
     var HORIZONTAL = false;
-    var maxedRect = client.geometry;
-    client.setMaximize(VERTICAL, HORIZONTAL);
+    var maxedRect = win.frameGeometry;
+    win.setMaximize(VERTICAL, HORIZONTAL);
 
     // Restore previous maximized size, but now unmaxed so has drop shadows
     // and window borders.
-    client.geometry = maxedRect;
+    win.frameGeometry = maxedRect;
   }
-  return client;
+  return win;
 };
 
 /**
- * @param {KWin::AbstractClient} client
- * @param {function} moveCb called with client
+ * @param {KWin::AbstractClient} win
+ * @param {function} moveCb called with win
  * @return {string} Yanjing.States value
  */
-Yanjing.beforeMove = function (client) {
-  if (!client.moveable) {
+Yanjing.beforeMove = function (win) {
+  if (!win.moveable) {
     return Yanjing.States.ERROR;
   }
 
-  // Horizonatally unmax a client before moving, since you shouldn't be able
+  // Horizonatally unmax a win before moving, since you shouldn't be able
   // move a maximized window.
   // setMaximize is documented at https://develop.kde.org/docs/plasma/kwin/api/
-  Yanjing.unmax(client);
+  Yanjing.unmax(win);
   return Yanjing.States.DONE;
 };
 
 Yanjing.Move = {};
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @return {string} Yanjing.States value
  */
-Yanjing.Move[Yanjing.Dirs.Left] = function (client) {
-  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+Yanjing.Move[Yanjing.Dirs.Left] = function (win) {
+  if (Yanjing.beforeMove(win) === Yanjing.States.ERROR) {
     return Yanjing.States.ERROR;
   }
 
-  var rect = client.geometry;
+  var rect = win.frameGeometry;
   var workAreaLeftEdge = Yanjing.getWorkAreaRect().x;
   var isFlushed = rect.x === workAreaLeftEdge;
   if (isFlushed) {
     return Yanjing.States.NOOP;
   }
 
-  var rect = client.geometry;
+  var rect = win.frameGeometry;
   rect.x = workAreaLeftEdge;
-  client.geometry = rect;
+  win.frameGeometry = rect;
   return Yanjing.States.DONE;
 };
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @return {string} Yanjing.States value
  */
-Yanjing.Move[Yanjing.Dirs.Right] = function (client) {
-  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+Yanjing.Move[Yanjing.Dirs.Right] = function (win) {
+  if (Yanjing.beforeMove(win) === Yanjing.States.ERROR) {
     return Yanjing.States.ERROR;
   }
 
-  var rect = client.geometry;
-  var clientRightEdge = Yanjing.getRightEdge(rect);
+  var rect = win.frameGeometry;
+  var winRightEdge = Yanjing.getRightEdge(rect);
 
   var workAreaRect = Yanjing.getWorkAreaRect();
   var workAreaRightEdge = Yanjing.getRightEdge(workAreaRect);
 
-  var isFlushed = clientRightEdge === workAreaRightEdge;
+  var isFlushed = winRightEdge === workAreaRightEdge;
   if (isFlushed) {
     return Yanjing.States.NOOP;
   }
 
   rect.x = workAreaRightEdge - rect.width;
-  client.geometry = rect;
+  win.frameGeometry = rect;
   return Yanjing.States.DONE;
 };
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @return {string} Yanjing.States value
  */
-Yanjing.Move[Yanjing.Dirs.Center] = function (client) {
-  if (Yanjing.beforeMove(client) === Yanjing.States.ERROR) {
+Yanjing.Move[Yanjing.Dirs.Center] = function (win) {
+  if (Yanjing.beforeMove(win) === Yanjing.States.ERROR) {
     return Yanjing.States.ERROR;
   }
 
-  var rect = client.geometry;
-  var clientWidth = rect.width;
+  var rect = win.frameGeometry;
+  var winWidth = rect.width;
   var workAreaRect = Yanjing.getWorkAreaRect();
   var workspaceCenterX = workAreaRect.width / 2 + workAreaRect.x;
-  var clientCenterX = rect.x + clientWidth / 2;
+  var winCenterX = rect.x + winWidth / 2;
   var isCentered =
-    clientCenterX - Yanjing.CENTER_MOE <= workspaceCenterX &&
-    clientCenterX + Yanjing.CENTER_MOE >= workspaceCenterX;
+    winCenterX - Yanjing.CENTER_MOE <= workspaceCenterX &&
+    winCenterX + Yanjing.CENTER_MOE >= workspaceCenterX;
   if (isCentered) {
     return Yanjing.States.NOOP;
   }
 
-  var distance = workspaceCenterX - clientCenterX;
+  var distance = workspaceCenterX - winCenterX;
   rect.x = rect.x + distance;
-  client.geometry = rect;
+  win.frameGeometry = rect;
   return Yanjing.States.DONE;
 };
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @param {string} key
  * @return {string} Yanjing.States value
  */
-Yanjing.squish = function (client, key) {
+Yanjing.squish = function (win, key) {
   var dir = Yanjing.Dirs[key];
   var move = Yanjing.Move[key];
   if (!move || !dir) {
@@ -277,9 +277,9 @@ Yanjing.squish = function (client, key) {
     return Yanjing.States.ERROR;
   }
 
-  var result = move(client);
+  var result = move(win);
   if (result === Yanjing.States.NOOP) {
-    return Yanjing.cycle(client, dir);
+    return Yanjing.cycle(win, dir);
   }
 
   if (result === Yanjing.States.ERROR) {
@@ -289,20 +289,20 @@ Yanjing.squish = function (client, key) {
 };
 
 /**
- * @param {KWin::AbstractClient} client
+ * @param {KWin::AbstractClient} win
  * @return {string} Yanjing.States value
  */
-Yanjing.yMax = function (client) {
-  if (!client || !client.resizeable) {
+Yanjing.yMax = function (win) {
+  if (!win || !win.resizeable) {
     return Yanjing.States.ERROR;
   }
 
-  // Work area for the active client, considers things like docks!
+  // Work area for the active win, considers things like docks!
   var workAreaRect = Yanjing.getWorkAreaRect();
-  var rect = client.geometry;
+  var rect = win.frameGeometry;
   rect.y = workAreaRect.y;
   rect.height = workAreaRect.height;
-  client.geometry = rect;
+  win.frameGeometry = rect;
   return Yanjing.States.DONE;
 };
 
@@ -312,8 +312,8 @@ Yanjing.main = function () {
     'Yanjing: Flush or cyclic resize window to left edge of screen',
     '',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.squish(client, Yanjing.Dirs.Left);
+      var win = workspace.activeWindow;
+      Yanjing.squish(win, Yanjing.Dirs.Left);
     },
   );
 
@@ -322,8 +322,8 @@ Yanjing.main = function () {
     'Yanjing: Center or cyclic resize window',
     '',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.squish(client, Yanjing.Dirs.Center);
+      var win = workspace.activeWindow;
+      Yanjing.squish(win, Yanjing.Dirs.Center);
     },
   );
 
@@ -332,8 +332,8 @@ Yanjing.main = function () {
     'Yanjing: Flush or cyclic resize window to right edge of screen',
     '',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.squish(client, Yanjing.Dirs.Right);
+      var win = workspace.activeWindow;
+      Yanjing.squish(win, Yanjing.Dirs.Right);
     },
   );
 
@@ -342,9 +342,9 @@ Yanjing.main = function () {
     'Yanjing: Vertically maximize and flush or cyclic resize window to left edge of screen',
     'ctrl+shift+meta+a',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.yMax(client);
-      Yanjing.squish(client, Yanjing.Dirs.Left);
+      var win = workspace.activeWindow;
+      Yanjing.yMax(win);
+      Yanjing.squish(win, Yanjing.Dirs.Left);
     },
   );
 
@@ -353,9 +353,9 @@ Yanjing.main = function () {
     'Yanjing: Vertically maximize and center or cyclic resize window',
     'ctrl+shift+meta+x',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.yMax(client);
-      Yanjing.squish(client, Yanjing.Dirs.Center);
+      var win = workspace.activeWindow;
+      Yanjing.yMax(win);
+      Yanjing.squish(win, Yanjing.Dirs.Center);
     },
   );
 
@@ -364,9 +364,9 @@ Yanjing.main = function () {
     'Yanjing: Vertically maximize and flush or cyclic resize window to right edge of screen',
     'ctrl+shift+meta+d',
     function () {
-      var client = workspace.activeClient;
-      Yanjing.yMax(client);
-      Yanjing.squish(client, Yanjing.Dirs.Right);
+      var win = workspace.activeWindow;
+      Yanjing.yMax(win);
+      Yanjing.squish(win, Yanjing.Dirs.Right);
     },
   );
 };

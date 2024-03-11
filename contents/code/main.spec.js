@@ -2,7 +2,7 @@
 // KWin Mocks
 // ===========================================================================
 
-global.print = jest.fn()//.mockImplementation((str) => console.error(str));
+global.print = jest.fn(); //.mockImplementation((str) => console.error(str));
 
 global.readConfig = jest.fn().mockImplementation(function (key, defaults) {
   return defaults;
@@ -23,7 +23,7 @@ const ClientRects = {
     x: SCREEN_LEFT,
     y: 32,
     width: SCREEN_WIDTH,
-    height: 1080 - 32 - 32
+    height: 1080 - 32 - 32,
   },
 };
 
@@ -31,9 +31,11 @@ global.workspace = {
   /**
    * Return workspace minus docks!
    */
-  clientArea: jest.fn().mockImplementation(function (ClientAreaOption, activeClient) {
-    return ClientRects[ClientAreaOption];
-  })
+  clientArea: jest
+    .fn()
+    .mockImplementation(function (ClientAreaOption, activeWindow) {
+      return ClientRects[ClientAreaOption];
+    }),
 };
 
 const HALF_SCREEN = global.workspace.clientArea('WorkArea').width / 2;
@@ -55,25 +57,27 @@ it('calls registerShortcut in main', () => {
 
 describe('sanitizeSizes', () => {
   it('returns array of filtered floats', () => {
-    expect(Yanjing.sanitizeSizes('0, 5, 10, x, 111.111, 0, 222.333'))
-      .toEqual([5, 10, 111.111, 222.333]);
+    expect(Yanjing.sanitizeSizes('0, 5, 10, x, 111.111, 0, 222.333')).toEqual([
+      5, 10, 111.111, 222.333,
+    ]);
   });
 });
 
 describe('sizeToWidth', () => {
   it(`should return px value against work area width`, () => {
     expect(Yanjing.sizeToWidth(33.333)).toBeCloseTo(615.99384);
-    expect(Yanjing.sizeToWidth(50))
-      .toBeCloseTo(HALF_SCREEN);
+    expect(Yanjing.sizeToWidth(50)).toBeCloseTo(HALF_SCREEN);
   });
 });
 
 describe('widthToSizeIndex', () => {
   it(`should return size index relative to ${global.workspace.workspaceWidth}`, () => {
-    expect(Yanjing.widthToSizeIndex(640))
-      .toBe(Yanjing.Sizes.findIndex((s) => s === 33.3333));
-    expect(Yanjing.widthToSizeIndex(HALF_SCREEN))
-      .toBe(Yanjing.Sizes.findIndex((s) => s === 50));
+    expect(Yanjing.widthToSizeIndex(640)).toBe(
+      Yanjing.Sizes.findIndex((s) => s === 33.3333),
+    );
+    expect(Yanjing.widthToSizeIndex(HALF_SCREEN)).toBe(
+      Yanjing.Sizes.findIndex((s) => s === 50),
+    );
   });
 });
 
@@ -112,13 +116,13 @@ describe('cycle', () => {
 
   it(`should try to resize`, () => {
     jest.spyOn(Yanjing, 'getNextWidth');
-    const client = {
+    const win = {
       resizeable: true,
-      geometry: { width: 640 }
+      frameGeometry: { width: 640 },
     };
-    Yanjing.cycle(client);
+    Yanjing.cycle(win);
     expect(Yanjing.getNextWidth).toHaveBeenCalledTimes(1);
-    expect(client.geometry.width).toBeCloseTo(462, 0);
+    expect(win.frameGeometry.width).toBeCloseTo(462, 0);
     Yanjing.getNextWidth.mockRestore();
   });
 });
@@ -126,112 +130,113 @@ describe('cycle', () => {
 describe('Move', () => {
   describe('Left', () => {
     it(`should return NOOP if already left`, () => {
-      const client = {
-        geometry: { x: SCREEN_LEFT },
+      const win = {
+        frameGeometry: { x: SCREEN_LEFT },
         moveable: true,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Left](client))
-        .toBe(Yanjing.States.NOOP);
+      expect(Yanjing.Move[Yanjing.Dirs.Left](win)).toBe(Yanjing.States.NOOP);
     });
 
     it(`should ignore immoveable windows`, () => {
-      const client = {
-        geometry: { x: 100 },
+      const win = {
+        frameGeometry: { x: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Left](client))
-        .toBe(Yanjing.States.ERROR);
+      expect(Yanjing.Move[Yanjing.Dirs.Left](win)).toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
-      const client = {
-        geometry: { x: 100 },
+      const win = {
+        frameGeometry: { x: 100 },
         moveable: true,
       };
-      const result = Yanjing.Move[Yanjing.Dirs.Left](client);
+      const result = Yanjing.Move[Yanjing.Dirs.Left](win);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x).toBe(SCREEN_LEFT);
+      expect(win.frameGeometry.x).toBe(SCREEN_LEFT);
     });
   });
 
   describe('Right', () => {
     it(`should return NOOP if already right`, () => {
-      const maximizedClient = {
-        geometry: {
+      const maximizedWin = {
+        frameGeometry: {
           x: SCREEN_LEFT,
           width: SCREEN_WIDTH,
         },
         moveable: true,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedClient))
-        .toBe(Yanjing.States.NOOP);
+      expect(Yanjing.Move[Yanjing.Dirs.Right](maximizedWin)).toBe(
+        Yanjing.States.NOOP,
+      );
 
-      const flushedClient = {
-        geometry: { x: 912, width: 1000 },
+      const flushedWin = {
+        frameGeometry: { x: 912, width: 1000 },
         moveable: true,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](flushedClient))
-        .toBe(Yanjing.States.NOOP);
+      expect(Yanjing.Move[Yanjing.Dirs.Right](flushedWin)).toBe(
+        Yanjing.States.NOOP,
+      );
     });
 
     it(`should ignore immoveable windows`, () => {
-      const client = {
-        geometry: { x: 100, width: 100 },
+      const win = {
+        frameGeometry: { x: 100, width: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Right](client))
-        .toBe(Yanjing.States.ERROR);
+      expect(Yanjing.Move[Yanjing.Dirs.Right](win)).toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
-      const client = {
-        geometry: { x: 100, width: 100 },
+      const win = {
+        frameGeometry: { x: 100, width: 100 },
         moveable: true,
       };
-      const result = Yanjing.Move[Yanjing.Dirs.Right](client);
+      const result = Yanjing.Move[Yanjing.Dirs.Right](win);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x).toBe(1812);
+      expect(win.frameGeometry.x).toBe(1812);
     });
   });
 
   describe('Center', () => {
     it(`should return NOOP if already center`, () => {
-      const maximizedClient = {
-        geometry: { x: SCREEN_LEFT, width: SCREEN_WIDTH },
+      const maximizedWin = {
+        frameGeometry: { x: SCREEN_LEFT, width: SCREEN_WIDTH },
         moveable: true,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedClient))
-        .toBe(Yanjing.States.NOOP);
+      expect(Yanjing.Move[Yanjing.Dirs.Center](maximizedWin)).toBe(
+        Yanjing.States.NOOP,
+      );
 
-      const centeredClient = {
-        geometry: {
-          x: SCREEN_LEFT + (SCREEN_WIDTH / 2) - (120 / 2),
-          width: 120
+      const centeredWin = {
+        frameGeometry: {
+          x: SCREEN_LEFT + SCREEN_WIDTH / 2 - 120 / 2,
+          width: 120,
         },
         moveable: true,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](centeredClient))
-        .toBe(Yanjing.States.NOOP);
+      expect(Yanjing.Move[Yanjing.Dirs.Center](centeredWin)).toBe(
+        Yanjing.States.NOOP,
+      );
     });
 
     it(`should ignore immoveable windows`, () => {
-      const client = {
-        geometry: { x: 100, width: 100 },
+      const win = {
+        frameGeometry: { x: 100, width: 100 },
         moveable: false,
       };
-      expect(Yanjing.Move[Yanjing.Dirs.Center](client))
-        .toBe(Yanjing.States.ERROR);
+      expect(Yanjing.Move[Yanjing.Dirs.Center](win)).toBe(Yanjing.States.ERROR);
     });
 
     it(`should try to move`, () => {
-      const client = {
-        geometry: { x: 100, width: 100 },
+      const win = {
+        frameGeometry: { x: 100, width: 100 },
         moveable: true,
       };
-      const result = Yanjing.Move[Yanjing.Dirs.Center](client);
+      const result = Yanjing.Move[Yanjing.Dirs.Center](win);
       expect(result).toBe(Yanjing.States.DONE);
-      expect(client.geometry.x)
-        .toBe(SCREEN_LEFT + (SCREEN_WIDTH / 2) - (100/2));
+      expect(win.frameGeometry.x).toBe(
+        SCREEN_LEFT + SCREEN_WIDTH / 2 - 100 / 2,
+      );
     });
   });
 });
@@ -241,25 +246,24 @@ describe('yMax', () => {
     const result1 = Yanjing.yMax(null);
     expect(result1).toBe(Yanjing.States.ERROR);
 
-    const client = {
-      geometry: { x: 100, height: 200, width: 500 },
+    const win = {
+      frameGeometry: { x: 100, height: 200, width: 500 },
       moveable: true,
     };
-    const result2 = Yanjing.yMax(client);
+    const result2 = Yanjing.yMax(win);
     expect(result2).toBe(Yanjing.States.ERROR);
-
   });
 
-  it('should resize client to workspace work area height', () => {
-    const client = {
-      geometry: { x: 100, height: 200, width: 500 },
+  it('should resize win to workspace work area height', () => {
+    const win = {
+      frameGeometry: { x: 100, height: 200, width: 500 },
       moveable: true,
       resizeable: true,
     };
-    const result = Yanjing.yMax(client);
+    const result = Yanjing.yMax(win);
     expect(result).toBe(Yanjing.States.DONE);
-    expect(client.geometry.y).toBe(ClientRects.WorkArea.y);
-    expect(client.geometry.height).toBe(ClientRects.WorkArea.height);
+    expect(win.frameGeometry.y).toBe(ClientRects.WorkArea.y);
+    expect(win.frameGeometry.height).toBe(ClientRects.WorkArea.height);
   });
 });
 
@@ -269,21 +273,21 @@ describe('squish', () => {
   });
 
   it('should return ERROR if unable to move', () => {
-    const client = {
+    const win = {
       moveable: false,
     };
-    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe(Yanjing.States.ERROR);
+    expect(Yanjing.squish(win, Yanjing.Dirs.Left)).toBe(Yanjing.States.ERROR);
   });
 
   it('should cycle if did not move', () => {
-    const client = {
-      geometry: { x: SCREEN_LEFT },
+    const win = {
+      frameGeometry: { x: SCREEN_LEFT },
       moveable: true,
     };
     Yanjing.cycle = jest.fn().mockImplementation(() => 'ok1');
-    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe('ok1');
+    expect(Yanjing.squish(win, Yanjing.Dirs.Left)).toBe('ok1');
     expect(Yanjing.cycle).toHaveBeenCalledTimes(1);
-    expect(Yanjing.squish(client, Yanjing.Dirs.Left)).toBe('ok1');
+    expect(Yanjing.squish(win, Yanjing.Dirs.Left)).toBe('ok1');
     expect(Yanjing.cycle).toHaveBeenCalledTimes(2);
     Yanjing.cycle.mockRestore();
   });
