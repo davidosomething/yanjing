@@ -4,7 +4,10 @@ KWin script to resize and move windows. Like Spectacle/Rectangle on mac.
 
 ## Installation
 
-Available in the [KDE store](https://store.kde.org/p/1492899/)
+Available in the KDE store for
+
+- [Plasma 6](https://store.kde.org/p/2136753/)
+- [Plasma 5](https://store.kde.org/p/1492899/)
 
 ## Configuration
 
@@ -23,6 +26,14 @@ You may need to disable and re-enable the plugin in
 
 ## Commands
 
+You can customize the shortcuts in
+
+```plain
+System Settings > Input & Output - Keyboard > Shortcuts > KWin
+```
+
+Defaults:
+
 - Yanjing LEFT - `no default`
   - Vertically maximize, flush the window to the LEFT side of the screen, or
     resize width if already flushed.
@@ -32,13 +43,13 @@ You may need to disable and re-enable the plugin in
 - Yanjing RIGHT - `no default`
   - Vertically maximize, flush the window to the RIGHT side of the screen,
     or resize width if already flushed.
-- Yanjing yMax + LEFT - `ctrl-shift-meta-a`
+- Yanjing yMax + LEFT - `Meta+Ctrl+Shift+a`
   - Vertically maximize, flush the window to the LEFT side of the screen, or
     resize width if already flushed.
-- Yanjing yMax + CENTER - `ctrl-shift-meta-x` -
+- Yanjing yMax + CENTER - `Meta+Ctrl+Shift+x` -
   - Vertically maximize, center window horizontally, or resize width if
     already centered. Centering allows a 2px margin of error.
-- Yanjing yMax + RIGHT - `ctrl-shift-meta-d`
+- Yanjing yMax + RIGHT - `Meta+Ctrl+Shift-D`
   - Vertically maximize, flush the window to the RIGHT side of the screen,
     or resize width if already flushed.
 
