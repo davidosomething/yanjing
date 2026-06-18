@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+node output-metadata.js > metadata.json

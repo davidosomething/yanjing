@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+# Detect qdbus
+QDBUS_CMD=""
+if command -v qdbus-qt6 >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus-qt6"
+elif command -v qdbus >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus"
+elif command -v qdbus6 >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus6"
+fi
+
+kwriteconfig6 --file kwinrc --group Plugins --key yanjingEnabled false
+
+if [[ -n "$QDBUS_CMD" ]]; then
+    "$QDBUS_CMD" org.kde.KWin /KWin org.kde.KWin.reconfigure
+elif command -v gdbus >/dev/null 2>&1; then
+    gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure
+fi

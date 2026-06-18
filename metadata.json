@@ -9,7 +9,7 @@
     ],
     "Category": "Window Management",
     "Dependencies": [],
-    "EnabledByDefault": true,
+    "Description": "KWin window size and movement [Plasma 6]",
     "Icon": "preferences-system-windows-script-test",
     "Id": "yanjing",
     "License": "MIT",
@@ -17,9 +17,12 @@
     "ServiceTypes": [
       "KWin/Script"
     ],
-    "Version": "7.0.0",
+    "Version": "8.0.1",
     "Website": "https://github.com/davidosomething/yanjing"
   },
+  "X-KDE-ParentComponents": [
+    "yanjing"
+  ],
   "X-Plasma-API": "javascript",
   "X-Plasma-API-Minimum-Version": "6.0",
   "X-Plasma-MainScript": "code/main.js"

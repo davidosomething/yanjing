@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE depends=["metadata", "typecheck", "compile"]
+set -euxo pipefail
+echo "Build complete"

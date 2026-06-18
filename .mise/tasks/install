@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# kwin-rectangle pattern: unload old via D-Bus, remove, install, reload via D-Bus
+set -euxo pipefail
+
+# Detect qdbus
+QDBUS_CMD=""
+if command -v qdbus-qt6 >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus-qt6"
+elif command -v qdbus >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus"
+elif command -v qdbus6 >/dev/null 2>&1; then
+    QDBUS_CMD="qdbus6"
+fi
+
+# Unload old script
+if [[ -n "$QDBUS_CMD" ]]; then
+    "$QDBUS_CMD" org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript yanjing || true
+fi
+
+# Remove old, install new
+kpackagetool6 -t KWin/Script -r yanjing || true
+kpackagetool6 -t KWin/Script -i .
+
+# Reload
+if [[ -n "$QDBUS_CMD" ]]; then
+    "$QDBUS_CMD" org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \
+        ~/.local/share/kwin/scripts/yanjing yanjing
+    "$QDBUS_CMD" org.kde.KWin /KWin org.kde.KWin.reconfigure
+    "$QDBUS_CMD" org.kde.KWin /Scripting org.kde.kwin.Scripting.start
+else
+    echo "Warning: qdbus not found. Package installed but not reloaded."
+fi

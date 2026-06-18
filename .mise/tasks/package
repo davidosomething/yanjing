@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+# Bump patch version before build (metadata reads version from package.json)
+node -e "
+const fs = require('fs');
+const p = require('./package.json');
+const [major, minor, patch] = p.version.split('.').map(Number);
+p.version = major + '.' + minor + '.' + (patch + 1);
+fs.writeFileSync('./package.json', JSON.stringify(p, null, 2) + '\n');
+"
+
+# Build (metadata → typecheck → compile)
+mise run build
+
+# Explicit file list — kwin-rectangle pattern
+FILES="contents/code/main.js metadata.json LICENSE"
+
+if command -v zip >/dev/null 2>&1; then
+    zip yanjing.kwinscript $FILES
+elif command -v bsdtar >/dev/null 2>&1; then
+    bsdtar -a -cf yanjing.kwinscript $FILES
+else
+    echo "Error: neither zip nor bsdtar is available to build yanjing.kwinscript" >&2
+    exit 1
+fi

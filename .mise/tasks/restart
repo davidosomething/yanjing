@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE depends=["disable", "enable"]
+set -euxo pipefail
+echo "KWin restarted"

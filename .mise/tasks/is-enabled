@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+kreadconfig6 --file kwinrc --group Plugins --key yanjingEnabled

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+journalctl -f QT_CATEGORY=js QT_CATEGORY=kwin_scripting

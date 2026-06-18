@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+npx esbuild src/main.ts --target=esnext --outfile=contents/code/main.js
+sed -i '1{/^"use strict";$/d}' contents/code/main.js
+sed -i 's/^var Yanjing;$/let Yanjing;/' contents/code/main.js

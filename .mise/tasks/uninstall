@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+kpackagetool6 -t KWin/Script -r yanjing
+
+# Clean up global shortcuts — try qdbus variants
+if command -v qdbus-qt6 >/dev/null 2>&1; then
+    qdbus-qt6 org.kde.kglobalaccel /component/kwin cleanUp
+elif command -v qdbus >/dev/null 2>&1; then
+    qdbus org.kde.kglobalaccel /component/kwin cleanUp
+elif command -v qdbus6 >/dev/null 2>&1; then
+    qdbus6 org.kde.kglobalaccel /component/kwin cleanUp
+else
+    gdbus call --session --dest org.kde.kglobalaccel --object-path /component/kwin --method org.kde.kglobalaccel.Component.cleanUp
+fi
