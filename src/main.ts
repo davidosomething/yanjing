@@ -15,16 +15,6 @@ namespace Yanjing {
   export const CENTER_MOE = 2;
 
   // =========================================================================
-  // State enum
-  // =========================================================================
-
-  export const enum State {
-    NOOP = 'NOOP',
-    DONE = 'DONE',
-    ERROR = 'ERROR',
-  }
-
-  // =========================================================================
   // Direction enum
   // =========================================================================
 
@@ -61,6 +51,20 @@ namespace Yanjing {
   export const MaxHeightPercent: number = DEFAULT_MAX_HEIGHT_PERCENT;
 
   // =========================================================================
+  // Geometry types
+  // =========================================================================
+
+  /** A rectangle with optional partial fields for transforms. */
+  interface Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+
+  type Transform = Partial<Rect>;
+
+  // =========================================================================
   // Geometry utilities
   // =========================================================================
 
@@ -72,7 +76,7 @@ namespace Yanjing {
    *
    * The returned rectangle is in **global** coordinates.
    */
-  export function getWorkAreaRect(): QRect {
+  export function getWorkAreaRect(): Rect {
     return workspace.clientArea(
       KWin.PlacementArea,
       workspace.activeWindow!,
@@ -80,7 +84,7 @@ namespace Yanjing {
   }
 
   /** Get the right edge x-coordinate of a rectangle. */
-  export function getRightEdge(rect: QRect): number {
+  export function getRightEdge(rect: Rect): number {
     return rect.x + rect.width;
   }
 
@@ -130,18 +134,24 @@ namespace Yanjing {
     return parseInt(String(nextWidth), 10);
   }
 
+  /**
+   * Copy geometry from a KWin frameGeometry object into a plain object.
+   * The object from frameGeometry is weird, it does not update properly
+   * so we create an independent object.
+   */
+  function copyGeometry(win: Window): Rect {
+    return {
+      width: win.frameGeometry.width,
+      height: win.frameGeometry.height,
+      x: win.frameGeometry.x,
+      y: win.frameGeometry.y,
+    };
+  }
+
   // =========================================================================
-  // Window state helpers
+  // Unmaximize
   // =========================================================================
 
-  /**
-   * Unmaximize a window without restoring its pre-max geometry.
-   *
-   * Simply calls setMaximize(false, false). The caller is responsible
-   * for setting the desired frameGeometry afterwards. We deliberately
-   * do NOT save and restore geometry here — that races with KWin's
-   * async unmax animation and can result in wrong window positions.
-   */
   export function unmax(win: Window): void {
     if (typeof win.setMaximize === 'function') {
       win.setMaximize(false, false);
@@ -149,248 +159,160 @@ namespace Yanjing {
   }
 
   // =========================================================================
-  // Move operations
-  // =========================================================================
-
-  type MoveFn = (win: Window) => State;
-
-  /** Flush window to the left edge of the work area. */
-  function moveLeft(win: Window): State {
-
-    // The object from frameGeometry is weird, it does not update properly
-    // so we create an independent object.
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y,
-    };
-
-    const workAreaLeftEdge = getWorkAreaRect().x;
-    const isFlushed = geo.x === workAreaLeftEdge;
-    if (isFlushed) {
-      return State.NOOP;
-    }
-
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaLeftEdge,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height,
-    };
-    return State.DONE;
-  }
-
-  /** Flush window to the right edge of the work area. */
-  function moveRight(win: Window): State {
-
-    // The object from frameGeometry is weird, it does not update properly
-    // so we create an independent object.
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y,
-    };
-
-    const winRightEdge = getRightEdge(geo);
-    const workAreaRect = getWorkAreaRect();
-    const workAreaRightEdge = getRightEdge(workAreaRect);
-
-    const isFlushed = winRightEdge === workAreaRightEdge;
-    if (isFlushed) {
-      return State.NOOP;
-    }
-
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaRightEdge - geo.width,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height,
-    };
-    return State.DONE;
-  }
-
-  /** Center the window horizontally in the work area. */
-  function moveCenter(win: Window): State {
-
-    // The object from frameGeometry is weird, it does not update properly
-    // so we create an independent object.
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y,
-    };
-
-    const workAreaRect = getWorkAreaRect();
-    const workspaceCenterX = workAreaRect.width / 2 + workAreaRect.x;
-    const winCenterX = geo.x + geo.width / 2;
-    const isCentered =
-      winCenterX - CENTER_MOE <= workspaceCenterX &&
-      winCenterX + CENTER_MOE >= workspaceCenterX;
-    if (isCentered) {
-      return State.NOOP;
-    }
-
-    const distance = workspaceCenterX - winCenterX;
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x + distance,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height,
-    };
-    return State.DONE;
-  }
-
-  /** Map of direction to move function. */
-  const Move: Record<string, MoveFn> = {
-    [Dir.Left]: moveLeft,
-    [Dir.Center]: moveCenter,
-    [Dir.Right]: moveRight,
-  };
-
-  // =========================================================================
-  // Cycle (resize) operations
+  // Apply transforms
   // =========================================================================
 
   /**
-   * After-cycle reposition callbacks.
-   * After resizing, windows may need to be re-flushed or re-centered.
+   * Merge one or more transforms into a base geometry, returning the
+   * resulting geometry. Later transforms override earlier ones.
+   * Null transforms are ignored.
    */
-  const AfterCycle: Record<string, (win: Window) => State> = {
-    [Dir.Left]: function (_win: Window): State {
-      return State.DONE;
-    },
-    [Dir.Center]: function (win: Window): State {
-      return moveCenter(win);
-    },
-    [Dir.Right]: function (win: Window): State {
-      return moveRight(win);
-    },
-  };
-
-  /**
-   * Cycle the window width to the next configured size.
-   *
-   * Sets the new width and re-applies positioning. Does NOT call
-   * setMaximize — assigning a non-maximized frameGeometry implicitly
-   * unmaximizes (same approach as Better Quick Tiles).
-   */
-  export function cycle(win: Window, dir: string): State {
-    // The object from frameGeometry is weird, it does not update properly
-    // so we create an independent object.
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y,
-    };
-
-    const nextWidth = Yanjing.getNextWidth(geo.width);
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x,
-      y: geo.y,
-      width: nextWidth,
-      height: geo.height,
-    };
-
-    const after = AfterCycle[dir];
-    if (after) {
-      return after(win);
-    }
-    return State.DONE;
-  }
-
-  // =========================================================================
-  // Squish: move + cycle
-  // =========================================================================
-
-  /**
-   * Move a window to a direction edge. If the window is already flush
-   * to that edge (move returns NOOP), cycle its width instead.
-   *
-   * This gives the "press once to flush, press again to resize" behavior.
-   */
-  export function squish(win: Window, key: string): State {
-    const dir = key;
-    const moveFn = Move[key];
-    if (!moveFn || !dir) {
-      print('[yanjing] Unrecognized command:', key);
-      return State.ERROR;
-    }
-
-    const result = moveFn(win);
-    if (result === State.NOOP) {
-      return Yanjing.cycle(win, dir);
-    }
-
-    if (result === State.ERROR) {
-      print('[yanjing] Failed to move', dir);
+  export function applyTransforms(base: Rect, transforms: (Transform | null)[]): Rect {
+    let result = { x: base.x, y: base.y, width: base.width, height: base.height };
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (!t) continue;
+      if (typeof t.x === 'number') result.x = t.x;
+      if (typeof t.y === 'number') result.y = t.y;
+      if (typeof t.width === 'number') result.width = t.width;
+      if (typeof t.height === 'number') result.height = t.height;
     }
     return result;
   }
 
   // =========================================================================
-  // Vertical maximize
+  // Transform generators (pure — no side effects)
   // =========================================================================
 
   /**
-   * Vertically maximize a window to the configured max height percent
-   * of the work area, positioned at the top of the work area.
+   * Return a transform to flush the window to the left edge.
+   * Returns null if already flush.
    */
-  export function yMax(win: Window): State {
-    if (!win) {
-      return State.ERROR;
-    }
+  export function getMoveLeftTransform(geo: Rect, workArea: Rect): Transform | null {
+    if (geo.x === workArea.x) return null;
+    return { x: workArea.x };
+  }
 
-    // The object from frameGeometry is weird, it does not update properly
-    // so we create an independent object.
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y,
-    };
+  /**
+   * Return a transform to flush the window to the right edge.
+   * Returns null if already flush.
+   */
+  export function getMoveRightTransform(geo: Rect, workArea: Rect): Transform | null {
+    const geoRight = getRightEdge(geo);
+    const waRight = getRightEdge(workArea);
+    if (geoRight === waRight) return null;
+    return { x: waRight - geo.width };
+  }
 
-    const workAreaRect = getWorkAreaRect();
-    const maxHeight = (MaxHeightPercent / 100) * workAreaRect.height;
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x,
-      y: workAreaRect.y,
-      width: geo.width,
-      height: maxHeight,
+  /**
+   * Return a transform to center the window horizontally.
+   * Returns null if already centered.
+   */
+  export function getMoveCenterTransform(geo: Rect, workArea: Rect): Transform | null {
+    const workspaceCenterX = workArea.width / 2 + workArea.x;
+    const winCenterX = geo.x + geo.width / 2;
+    const isCentered =
+      winCenterX - CENTER_MOE <= workspaceCenterX &&
+      winCenterX + CENTER_MOE >= workspaceCenterX;
+    if (isCentered) return null;
+    return { x: geo.x + (workspaceCenterX - winCenterX) };
+  }
+
+  /** Map of direction to move transform generator. */
+  const MoveTransform: Record<string, (geo: Rect, wa: Rect) => Transform | null> = {
+    [Dir.Left]: getMoveLeftTransform,
+    [Dir.Center]: getMoveCenterTransform,
+    [Dir.Right]: getMoveRightTransform,
+  };
+
+  /**
+   * Return a transform to cycle the window width to the next configured size.
+   */
+  export function getCycleTransform(geo: Rect): Transform {
+    const nextWidth = getNextWidth(geo.width);
+    return { width: nextWidth };
+  }
+
+  /**
+   * After-cycle reposition transforms.
+   * Left: stay put. Center: re-center. Right: re-flush right.
+   */
+  function getAfterCycleTransform(geo: Rect, workArea: Rect, dir: string): Transform | null {
+    if (dir === Dir.Center) return getMoveCenterTransform(geo, workArea);
+    if (dir === Dir.Right) return getMoveRightTransform(geo, workArea);
+    return null; // Left: no reposition needed
+  }
+
+  /**
+   * Return a transform to vertically maximize the window.
+   */
+  export function getYMaxTransform(_geo: Rect, workArea: Rect): Transform {
+    const maxHeight = (MaxHeightPercent / 100) * workArea.height;
+    return { y: workArea.y, height: maxHeight };
+  }
+
+  /**
+   * Return a transform to fill the entire work area (faux fullscreen).
+   */
+  export function getFauxFullscreenTransform(workArea: Rect): Transform {
+    return {
+      x: workArea.x,
+      y: workArea.y,
+      width: workArea.width,
+      height: workArea.height,
     };
-    return State.DONE;
   }
 
   // =========================================================================
-  // Faux fullscreen
+  // Squish: move-or-cycle decision (pure)
   // =========================================================================
 
   /**
-   * Resize window to fill the entire work area (faux fullscreen).
-   * Unlike KWin's native fullscreen, this respects docks and panels.
+   * If the window is not flush to the target edge, return the move transform.
+   * If it is already flush, return the cycle transform instead.
+   *
+   * This gives the "press once to flush, press again to resize" behavior.
    */
-  export function fauxFullscreen(win: Window): State {
-    if (!win) {
-      return State.ERROR;
+  export function getSquishTransform(geo: Rect, workArea: Rect, key: string): Transform | null {
+    const moveFn = MoveTransform[key];
+    if (!moveFn) {
+      print('[yanjing] Unrecognized command:', key);
+      return null;
     }
 
-    const workAreaRect = getWorkAreaRect();
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaRect.x,
-      y: workAreaRect.y,
-      width: workAreaRect.width,
-      height: workAreaRect.height,
-    };
-    return State.DONE;
+    const moveTransform = moveFn(geo, workArea);
+    if (moveTransform) {
+      return moveTransform; // Not flush yet — just move
+    }
+
+    // Already flush — cycle width, then reposition
+    const cycleTransform = getCycleTransform(geo);
+    // After resizing, the window may need to be re-flushed or re-centered.
+    // Apply the cycle transform to geo to compute the intermediate geometry,
+    // then check if repositioning is needed.
+    const afterGeo = applyTransforms(geo, [cycleTransform]);
+    const afterTransform = getAfterCycleTransform(afterGeo, workArea, key);
+
+    return mergeTransforms([cycleTransform, afterTransform]);
+  }
+
+  /**
+   * Merge multiple non-null transforms into one.
+   * Later transforms override earlier ones for the same property.
+   */
+  function mergeTransforms(transforms: (Transform | null)[]): Transform | null {
+    let result: Transform = {};
+    let hasAny = false;
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (!t) continue;
+      hasAny = true;
+      if (typeof t.x === 'number') result.x = t.x;
+      if (typeof t.y === 'number') result.y = t.y;
+      if (typeof t.width === 'number') result.width = t.width;
+      if (typeof t.height === 'number') result.height = t.height;
+    }
+    return hasAny ? result : null;
   }
 
   // =========================================================================
@@ -401,6 +323,7 @@ namespace Yanjing {
    * Register all keyboard shortcuts and start the script.
    */
   export function main(): void {
+    // Left
     registerShortcut(
       'left',
       'Yanjing: Flush or cyclic resize window to left edge of screen',
@@ -409,10 +332,16 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, Dir.Left);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, Dir.Left);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Center
     registerShortcut(
       'center',
       'Yanjing: Center or cyclic resize window',
@@ -421,10 +350,16 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, Dir.Center);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, Dir.Center);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Right
     registerShortcut(
       'right',
       'Yanjing: Flush or cyclic resize window to right edge of screen',
@@ -433,10 +368,16 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, Dir.Right);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, Dir.Right);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Left + yMax
     registerShortcut(
       'left-ymax',
       'Yanjing: Vertically maximize and flush or cyclic resize window to left edge of screen',
@@ -445,11 +386,19 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, Dir.Left);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, Dir.Left),
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Center + yMax
     registerShortcut(
       'center-ymax',
       'Yanjing: Vertically maximize and center or cyclic resize window',
@@ -458,11 +407,19 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, Dir.Center);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, Dir.Center),
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Right + yMax
     registerShortcut(
       'right-ymax',
       'Yanjing: Vertically maximize and flush or cyclic resize window to right edge of screen',
@@ -471,11 +428,19 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, Dir.Right);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, Dir.Right),
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
 
+    // Faux fullscreen
     registerShortcut(
       'faux-fullscreen',
       'Yanjing: Resize window to fill the entire work area',
@@ -484,7 +449,11 @@ namespace Yanjing {
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        fauxFullscreen(win);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getFauxFullscreenTransform(workArea);
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       },
     );
   }

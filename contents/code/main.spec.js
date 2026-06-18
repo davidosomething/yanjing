@@ -1,5 +1,5 @@
 // ===========================================================================
-// KWin Mocks — Plasma 6.6 three-argument clientArea API
+// KWin Mocks — Plasma 6 two-argument clientArea API
 // ===========================================================================
 
 global.print = jest.fn();
@@ -12,7 +12,6 @@ global.registerShortcut = jest.fn();
 
 global.KWin = {
   PlacementArea: 0,
-  WorkArea: 5,
 };
 
 const RIGHT_SIDEBAR_WIDTH = 72;
@@ -27,32 +26,10 @@ const PLACEMENT_AREA = {
   height: SCREEN_FULL_HEIGHT - 32 - 32,
 };
 
-// Screen geometry (global coordinates for primary display)
-const SCREEN_GEOMETRY = {
-  x: 0,
-  y: 0,
-  width: SCREEN_FULL_WIDTH,
-  height: SCREEN_FULL_HEIGHT,
-};
-
 global.workspace = {
   activeWindow: {
     desktopWindow: false,
   },
-  activeScreen: {
-    geometry: SCREEN_GEOMETRY,
-    name: 'eDP-1',
-    manufacturer: 'AUO',
-    model: 'SomeModel',
-    logicalDpi: 96,
-    devicePixelRatio: 1,
-  },
-  currentDesktop: 1,
-
-  /**
-   * Two-argument clientArea(option, window) — kwin-rectangle pattern.
-   * Returns the PlacementArea (already in global coordinates).
-   */
   clientArea: jest
     .fn()
     .mockImplementation(function (option, window) {
@@ -60,11 +37,7 @@ global.workspace = {
     }),
 };
 
-// clientArea already returns global coordinates — no screen offset needed.
-// BQT confirmed this (lines 178-179 in its main.js are commented out).
 const WORK_AREA = PLACEMENT_AREA;
-
-const HALF_SCREEN = WORK_AREA.width / 2;
 
 // ===========================================================================
 
@@ -119,6 +92,8 @@ describe('getWorkAreaRect', () => {
 // ===========================================================================
 
 describe('sizeToWidth', () => {
+  const HALF_SCREEN = WORK_AREA.width / 2;
+
   it.each`
     size       | expected
     ${33.333}  | ${615.99384}
@@ -133,6 +108,8 @@ describe('sizeToWidth', () => {
 // ===========================================================================
 
 describe('widthToSizeIndex', () => {
+  const HALF_SCREEN = WORK_AREA.width / 2;
+
   it.each`
     width         | expectedSize
     ${640}        | ${33.3333}
@@ -185,40 +162,9 @@ describe('getNextWidth', () => {
   });
 
   it('rounds middling widths consistently', () => {
-    // The exact rounding depends on the Plasma version
     expect(Yanjing.getNextWidth(960)).toBeGreaterThan(614);
     expect(Yanjing.getNextWidth(960)).toBeLessThan(617);
   });
-});
-
-// ===========================================================================
-// cycle
-// ===========================================================================
-
-describe('cycle', () => {
-  it('should resize even non-resizable flagged windows (kwin-rectangle pattern)', () => {
-    jest.spyOn(Yanjing, 'getNextWidth');
-    const win = {
-      resizable: false,
-      frameGeometry: { x: 100, y: 100, width: 640, height: 480 },
-    };
-    Yanjing.cycle(win);
-    expect(Yanjing.getNextWidth).toHaveBeenCalled();
-    Yanjing.getNextWidth.mockRestore();
-  });
-
-  it('should try to resize', () => {
-    jest.spyOn(Yanjing, 'getNextWidth');
-    const win = {
-      resizable: true,
-      frameGeometry: { x: 100, y: 100, width: 640, height: 480 },
-    };
-    Yanjing.cycle(win);
-    expect(Yanjing.getNextWidth).toHaveBeenCalledTimes(1);
-    expect(win.frameGeometry.width).toBeCloseTo(462, 0);
-    Yanjing.getNextWidth.mockRestore();
-  });
-
 });
 
 // ===========================================================================
@@ -238,162 +184,182 @@ describe('unmax', () => {
 });
 
 // ===========================================================================
-// Move (tested via squish to exercise the full move→cycle pipeline)
+// applyTransforms
 // ===========================================================================
 
-describe('squish', () => {
-  describe('error conditions', () => {
-    it('returns ERROR for unknown direction key', () => {
-      expect(Yanjing.squish({}, 'nowhere')).toBe(Yanjing.State.ERROR);
-    });
+describe('applyTransforms', () => {
+  const base = { x: 10, y: 20, width: 100, height: 200 };
 
-    it.each`
-      dir              | directionLabel
-      ${Yanjing.Dir.Left}   | ${'left'}
-      ${Yanjing.Dir.Center} | ${'center'}
-      ${Yanjing.Dir.Right}  | ${'right'}
-    `('flushes immovable window anyway ($directionLabel) — kwin-rectangle pattern', ({ dir }) => {
-      const win = {
-        frameGeometry: { x: 100, y: 100, width: 500, height: 400 },
-        movable: false,
-        setMaximize: jest.fn(),
-      };
-      expect(Yanjing.squish(win, dir)).toBe(Yanjing.State.DONE);
+  it('returns base unchanged with no transforms', () => {
+    expect(Yanjing.applyTransforms(base, [])).toEqual(base);
+  });
+
+  it('returns base unchanged with null transforms', () => {
+    expect(Yanjing.applyTransforms(base, [null, null])).toEqual(base);
+  });
+
+  it('applies partial x transform', () => {
+    expect(Yanjing.applyTransforms(base, [{ x: 50 }])).toEqual({
+      x: 50, y: 20, width: 100, height: 200,
     });
   });
 
-  describe('flush to edge', () => {
-    it.each`
-      dir              | directionLabel | startX    | expectedX
-      ${Yanjing.Dir.Left}   | ${'left'}     | ${100}    | ${WORK_AREA.x}
-      ${Yanjing.Dir.Right}  | ${'right'}    | ${100}    | ${WORK_AREA.x + WORK_AREA.width - 100}
-      ${Yanjing.Dir.Center} | ${'center'}   | ${100}    | ${WORK_AREA.x + WORK_AREA.width / 2 - 50}
-    `(
-      'flushes $directionLabel (startX=$startX, width=100) → x=$expectedX',
-      ({ dir, startX }) => {
-        const width = 100;
-        const win = {
-          frameGeometry: { x: startX, y: 100, width, height: 400 },
-          movable: true,
-        };
-        const result = Yanjing.squish(win, dir);
-        expect(result).toBe(Yanjing.State.DONE);
-        expect(win.frameGeometry.x).toBe(
-          dir === Yanjing.Dir.Center
-            ? WORK_AREA.x + WORK_AREA.width / 2 - width / 2
-            : dir === Yanjing.Dir.Right
-              ? WORK_AREA.x + WORK_AREA.width - width
-              : WORK_AREA.x,
-        );
-      },
+  it('later transforms override earlier ones', () => {
+    expect(Yanjing.applyTransforms(base, [{ x: 50 }, { x: 99 }])).toEqual({
+      x: 99, y: 20, width: 100, height: 200,
+    });
+  });
+
+  it('applies multiple properties across transforms', () => {
+    expect(Yanjing.applyTransforms(base, [
+      { y: 0, height: 300 },
+      { x: 0 },
+    ])).toEqual({
+      x: 0, y: 0, width: 100, height: 300,
+    });
+  });
+
+  it('does not mutate the base object', () => {
+    const copy = { ...base };
+    Yanjing.applyTransforms(base, [{ x: 999 }]);
+    expect(base).toEqual(copy);
+  });
+});
+
+// ===========================================================================
+// Move transforms
+// ===========================================================================
+
+describe('getMoveLeftTransform', () => {
+  it('returns null if already flush left', () => {
+    expect(Yanjing.getMoveLeftTransform(
+      { x: WORK_AREA.x, y: 0, width: 500, height: 400 },
+      WORK_AREA,
+    )).toBeNull();
+  });
+
+  it('returns x transform if not flush', () => {
+    expect(Yanjing.getMoveLeftTransform(
+      { x: 200, y: 0, width: 500, height: 400 },
+      WORK_AREA,
+    )).toEqual({ x: WORK_AREA.x });
+  });
+});
+
+describe('getMoveRightTransform', () => {
+  it('returns null if already flush right', () => {
+    const geo = { x: WORK_AREA.x + WORK_AREA.width - 500, y: 0, width: 500, height: 400 };
+    expect(Yanjing.getMoveRightTransform(geo, WORK_AREA)).toBeNull();
+  });
+
+  it('returns x transform if not flush', () => {
+    const geo = { x: 100, y: 0, width: 500, height: 400 };
+    expect(Yanjing.getMoveRightTransform(geo, WORK_AREA)).toEqual({
+      x: WORK_AREA.x + WORK_AREA.width - 500,
+    });
+  });
+});
+
+describe('getMoveCenterTransform', () => {
+  it('returns null if already centered', () => {
+    const width = 120;
+    const centeredX = WORK_AREA.x + WORK_AREA.width / 2 - width / 2;
+    expect(Yanjing.getMoveCenterTransform(
+      { x: centeredX, y: 0, width, height: 400 },
+      WORK_AREA,
+    )).toBeNull();
+  });
+
+  it('returns x transform if not centered', () => {
+    const geo = { x: 100, y: 0, width: 200, height: 400 };
+    const result = Yanjing.getMoveCenterTransform(geo, WORK_AREA);
+    expect(result).not.toBeNull();
+    expect(result.x).toBe(WORK_AREA.x + WORK_AREA.width / 2 - 100);
+  });
+});
+
+// ===========================================================================
+// getCycleTransform
+// ===========================================================================
+
+describe('getCycleTransform', () => {
+  it('returns width transform for next size', () => {
+    const geo = { x: 100, y: 100, width: 640, height: 480 };
+    const result = Yanjing.getCycleTransform(geo);
+    expect(result).not.toBeNull();
+    expect(result.width).toBeCloseTo(462, 0);
+  });
+});
+
+// ===========================================================================
+// getYMaxTransform
+// ===========================================================================
+
+describe('getYMaxTransform', () => {
+  it('returns y and height transform', () => {
+    const result = Yanjing.getYMaxTransform(
+      { x: 100, y: 100, width: 500, height: 200 },
+      WORK_AREA,
     );
-  });
-
-  describe('already flush → cycles width', () => {
-    it.each`
-      dir              | directionLabel | winWidth | startX
-      ${Yanjing.Dir.Left}   | ${'left'}     | ${500}   | ${WORK_AREA.x}
-      ${Yanjing.Dir.Right}  | ${'right'}    | ${500}   | ${WORK_AREA.x + WORK_AREA.width - 500}
-    `(
-      '$directionLabel: cycles when already flush (width=$winWidth)',
-      ({ dir, winWidth, startX }) => {
-        const win = {
-          frameGeometry: { x: startX, y: 100, width: winWidth, height: 400 },
-          movable: true,
-          resizable: true,
-        };
-        const result = Yanjing.squish(win, dir);
-        expect(result).toBe(Yanjing.State.DONE);
-        // Width changed due to cycle
-        expect(win.frameGeometry.width).not.toBe(winWidth);
-      },
-    );
-
-    it('center: cycles when already centered', () => {
-      const winWidth = 120;
-      const centeredX = WORK_AREA.x + WORK_AREA.width / 2 - winWidth / 2;
-      const win = {
-        frameGeometry: { x: centeredX, y: 100, width: winWidth, height: 100 },
-        movable: true,
-        resizable: true,
-      };
-      const result = Yanjing.squish(win, Yanjing.Dir.Center);
-      // NOOP from moveCenter → cycle → DONE
-      expect(win.frameGeometry.width).toBeCloseTo(1386, 0);
-      // After cycle, center is re-applied
-      expect(win.frameGeometry.x).toBe(
-        WORK_AREA.x + WORK_AREA.width / 2 - win.frameGeometry.width / 2,
-      );
-    });
-  });
-
-  describe('spy: cycle called when move returns NOOP', () => {
-    it('calls Yanjing.cycle when window is already flush left', () => {
-      const cycleSpy = jest.spyOn(Yanjing, 'cycle').mockImplementation(() => 'ok1');
-      const win = {
-        frameGeometry: { x: WORK_AREA.x, y: 100, width: 500, height: 400 },
-        movable: true,
-      };
-      expect(Yanjing.squish(win, Yanjing.Dir.Left)).toBe('ok1');
-      expect(cycleSpy).toHaveBeenCalledTimes(1);
-      // Second press also cycles
-      expect(Yanjing.squish(win, Yanjing.Dir.Left)).toBe('ok1');
-      expect(cycleSpy).toHaveBeenCalledTimes(2);
-      cycleSpy.mockRestore();
+    expect(result).toEqual({
+      y: WORK_AREA.y,
+      height: WORK_AREA.height,
     });
   });
 });
 
 // ===========================================================================
-// yMax
+// getFauxFullscreenTransform
 // ===========================================================================
 
-describe('yMax', () => {
-  describe('error conditions', () => {
-    it('returns ERROR for null window', () => {
-      expect(Yanjing.yMax(null)).toBe(Yanjing.State.ERROR);
+describe('getFauxFullscreenTransform', () => {
+  it('returns full work area transform', () => {
+    expect(Yanjing.getFauxFullscreenTransform(WORK_AREA)).toEqual({
+      x: WORK_AREA.x,
+      y: WORK_AREA.y,
+      width: WORK_AREA.width,
+      height: WORK_AREA.height,
     });
-
-    it('vertically maximizes even non-resizable windows (kwin-rectangle pattern)', () => {
-      const win = {
-        frameGeometry: { x: 100, y: 100, height: 200, width: 500 },
-        resizable: false,
-        setMaximize: jest.fn(),
-      };
-      expect(Yanjing.yMax(win)).toBe(Yanjing.State.DONE);
-    });
-  });
-
-  it('resizes window to work area height', () => {
-    const win = {
-      frameGeometry: { x: 100, y: 100, height: 200, width: 500 },
-      movable: true,
-      resizable: true,
-    };
-    const result = Yanjing.yMax(win);
-    expect(result).toBe(Yanjing.State.DONE);
-    expect(win.frameGeometry.y).toBe(WORK_AREA.y);
-    expect(win.frameGeometry.height).toBe(WORK_AREA.height);
   });
 });
 
 // ===========================================================================
-// fauxFullscreen
+// getSquishTransform
 // ===========================================================================
 
-describe('fauxFullscreen', () => {
-  it('returns ERROR for null window', () => {
-    expect(Yanjing.fauxFullscreen(null)).toBe(Yanjing.State.ERROR);
+describe('getSquishTransform', () => {
+  const geo = { x: 200, y: 100, width: 500, height: 400 };
+
+  it('returns move transform when not flush left', () => {
+    const result = Yanjing.getSquishTransform(geo, WORK_AREA, Yanjing.Dir.Left);
+    expect(result).toEqual({ x: WORK_AREA.x });
   });
 
-  it('fills the work area', () => {
-    const win = {
-      frameGeometry: { x: 100, y: 100, width: 500, height: 300 },
-      movable: true,
-      resizable: true,
-    };
-    const result = Yanjing.fauxFullscreen(win);
-    expect(result).toBe(Yanjing.State.DONE);
-    expect(win.frameGeometry).toEqual(WORK_AREA);
+  it('returns move transform when not flush right', () => {
+    const result = Yanjing.getSquishTransform(geo, WORK_AREA, Yanjing.Dir.Right);
+    expect(result).not.toBeNull();
+    expect(result.x).toBe(WORK_AREA.x + WORK_AREA.width - 500);
+  });
+
+  it('returns cycle+reposition when already flush left', () => {
+    const flushGeo = { x: WORK_AREA.x, y: 100, width: 500, height: 400 };
+    const result = Yanjing.getSquishTransform(flushGeo, WORK_AREA, Yanjing.Dir.Left);
+    expect(result).not.toBeNull();
+    expect(result.width).toBeCloseTo(1386, 0);
+    // Left: no reposition, so x should not be in result
+    expect(result.x).toBeUndefined();
+  });
+
+  it('returns cycle+reposition when already flush right', () => {
+    const flushGeo = { x: WORK_AREA.x + WORK_AREA.width - 500, y: 100, width: 500, height: 400 };
+    const result = Yanjing.getSquishTransform(flushGeo, WORK_AREA, Yanjing.Dir.Right);
+    expect(result).not.toBeNull();
+    // Should have both width (cycle) and x (re-flush right after resize)
+    expect(typeof result.width).toBe('number');
+    expect(typeof result.x).toBe('number');
+  });
+
+  it('returns null for unknown direction', () => {
+    expect(Yanjing.getSquishTransform(geo, WORK_AREA, 'nowhere')).toBeNull();
   });
 });

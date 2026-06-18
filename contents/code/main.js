@@ -10,12 +10,6 @@
 let Yanjing;
 ((Yanjing2) => {
   Yanjing2.CENTER_MOE = 2;
-  let State;
-  ((State2) => {
-    State2["NOOP"] = "NOOP";
-    State2["DONE"] = "DONE";
-    State2["ERROR"] = "ERROR";
-  })(State = Yanjing2.State || (Yanjing2.State = {}));
   let Dir;
   ((Dir2) => {
     Dir2["Left"] = "Left";
@@ -75,172 +69,112 @@ let Yanjing;
     return parseInt(String(nextWidth), 10);
   }
   Yanjing2.getNextWidth = getNextWidth;
+  function copyGeometry(win) {
+    return {
+      width: win.frameGeometry.width,
+      height: win.frameGeometry.height,
+      x: win.frameGeometry.x,
+      y: win.frameGeometry.y
+    };
+  }
   function unmax(win) {
     if (typeof win.setMaximize === "function") {
       win.setMaximize(false, false);
     }
   }
   Yanjing2.unmax = unmax;
-  function moveLeft(win) {
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y
-    };
-    const workAreaLeftEdge = getWorkAreaRect().x;
-    const isFlushed = geo.x === workAreaLeftEdge;
-    if (isFlushed) {
-      return "NOOP" /* NOOP */;
-    }
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaLeftEdge,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height
-    };
-    return "DONE" /* DONE */;
-  }
-  function moveRight(win) {
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y
-    };
-    const winRightEdge = getRightEdge(geo);
-    const workAreaRect = getWorkAreaRect();
-    const workAreaRightEdge = getRightEdge(workAreaRect);
-    const isFlushed = winRightEdge === workAreaRightEdge;
-    if (isFlushed) {
-      return "NOOP" /* NOOP */;
-    }
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaRightEdge - geo.width,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height
-    };
-    return "DONE" /* DONE */;
-  }
-  function moveCenter(win) {
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y
-    };
-    const workAreaRect = getWorkAreaRect();
-    const workspaceCenterX = workAreaRect.width / 2 + workAreaRect.x;
-    const winCenterX = geo.x + geo.width / 2;
-    const isCentered = winCenterX - Yanjing2.CENTER_MOE <= workspaceCenterX && winCenterX + Yanjing2.CENTER_MOE >= workspaceCenterX;
-    if (isCentered) {
-      return "NOOP" /* NOOP */;
-    }
-    const distance = workspaceCenterX - winCenterX;
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x + distance,
-      y: geo.y,
-      width: geo.width,
-      height: geo.height
-    };
-    return "DONE" /* DONE */;
-  }
-  const Move = {
-    ["Left" /* Left */]: moveLeft,
-    ["Center" /* Center */]: moveCenter,
-    ["Right" /* Right */]: moveRight
-  };
-  const AfterCycle = {
-    ["Left" /* Left */]: function(_win) {
-      return "DONE" /* DONE */;
-    },
-    ["Center" /* Center */]: function(win) {
-      return moveCenter(win);
-    },
-    ["Right" /* Right */]: function(win) {
-      return moveRight(win);
-    }
-  };
-  function cycle(win, dir) {
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y
-    };
-    const nextWidth = Yanjing2.getNextWidth(geo.width);
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x,
-      y: geo.y,
-      width: nextWidth,
-      height: geo.height
-    };
-    const after = AfterCycle[dir];
-    if (after) {
-      return after(win);
-    }
-    return "DONE" /* DONE */;
-  }
-  Yanjing2.cycle = cycle;
-  function squish(win, key) {
-    const dir = key;
-    const moveFn = Move[key];
-    if (!moveFn || !dir) {
-      print("[yanjing] Unrecognized command:", key);
-      return "ERROR" /* ERROR */;
-    }
-    const result = moveFn(win);
-    if (result === "NOOP" /* NOOP */) {
-      return Yanjing2.cycle(win, dir);
-    }
-    if (result === "ERROR" /* ERROR */) {
-      print("[yanjing] Failed to move", dir);
+  function applyTransforms(base, transforms) {
+    let result = { x: base.x, y: base.y, width: base.width, height: base.height };
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (!t) continue;
+      if (typeof t.x === "number") result.x = t.x;
+      if (typeof t.y === "number") result.y = t.y;
+      if (typeof t.width === "number") result.width = t.width;
+      if (typeof t.height === "number") result.height = t.height;
     }
     return result;
   }
-  Yanjing2.squish = squish;
-  function yMax(win) {
-    if (!win) {
-      return "ERROR" /* ERROR */;
-    }
-    const geo = {
-      width: win.frameGeometry.width,
-      height: win.frameGeometry.height,
-      x: win.frameGeometry.x,
-      y: win.frameGeometry.y
-    };
-    const workAreaRect = getWorkAreaRect();
-    const maxHeight = Yanjing2.MaxHeightPercent / 100 * workAreaRect.height;
-    unmax(win);
-    win.frameGeometry = {
-      x: geo.x,
-      y: workAreaRect.y,
-      width: geo.width,
-      height: maxHeight
-    };
-    return "DONE" /* DONE */;
+  Yanjing2.applyTransforms = applyTransforms;
+  function getMoveLeftTransform(geo, workArea) {
+    if (geo.x === workArea.x) return null;
+    return { x: workArea.x };
   }
-  Yanjing2.yMax = yMax;
-  function fauxFullscreen(win) {
-    if (!win) {
-      return "ERROR" /* ERROR */;
-    }
-    const workAreaRect = getWorkAreaRect();
-    unmax(win);
-    win.frameGeometry = {
-      x: workAreaRect.x,
-      y: workAreaRect.y,
-      width: workAreaRect.width,
-      height: workAreaRect.height
-    };
-    return "DONE" /* DONE */;
+  Yanjing2.getMoveLeftTransform = getMoveLeftTransform;
+  function getMoveRightTransform(geo, workArea) {
+    const geoRight = getRightEdge(geo);
+    const waRight = getRightEdge(workArea);
+    if (geoRight === waRight) return null;
+    return { x: waRight - geo.width };
   }
-  Yanjing2.fauxFullscreen = fauxFullscreen;
+  Yanjing2.getMoveRightTransform = getMoveRightTransform;
+  function getMoveCenterTransform(geo, workArea) {
+    const workspaceCenterX = workArea.width / 2 + workArea.x;
+    const winCenterX = geo.x + geo.width / 2;
+    const isCentered = winCenterX - Yanjing2.CENTER_MOE <= workspaceCenterX && winCenterX + Yanjing2.CENTER_MOE >= workspaceCenterX;
+    if (isCentered) return null;
+    return { x: geo.x + (workspaceCenterX - winCenterX) };
+  }
+  Yanjing2.getMoveCenterTransform = getMoveCenterTransform;
+  const MoveTransform = {
+    ["Left" /* Left */]: getMoveLeftTransform,
+    ["Center" /* Center */]: getMoveCenterTransform,
+    ["Right" /* Right */]: getMoveRightTransform
+  };
+  function getCycleTransform(geo) {
+    const nextWidth = getNextWidth(geo.width);
+    return { width: nextWidth };
+  }
+  Yanjing2.getCycleTransform = getCycleTransform;
+  function getAfterCycleTransform(geo, workArea, dir) {
+    if (dir === "Center" /* Center */) return getMoveCenterTransform(geo, workArea);
+    if (dir === "Right" /* Right */) return getMoveRightTransform(geo, workArea);
+    return null;
+  }
+  function getYMaxTransform(_geo, workArea) {
+    const maxHeight = Yanjing2.MaxHeightPercent / 100 * workArea.height;
+    return { y: workArea.y, height: maxHeight };
+  }
+  Yanjing2.getYMaxTransform = getYMaxTransform;
+  function getFauxFullscreenTransform(workArea) {
+    return {
+      x: workArea.x,
+      y: workArea.y,
+      width: workArea.width,
+      height: workArea.height
+    };
+  }
+  Yanjing2.getFauxFullscreenTransform = getFauxFullscreenTransform;
+  function getSquishTransform(geo, workArea, key) {
+    const moveFn = MoveTransform[key];
+    if (!moveFn) {
+      print("[yanjing] Unrecognized command:", key);
+      return null;
+    }
+    const moveTransform = moveFn(geo, workArea);
+    if (moveTransform) {
+      return moveTransform;
+    }
+    const cycleTransform = getCycleTransform(geo);
+    const afterGeo = applyTransforms(geo, [cycleTransform]);
+    const afterTransform = getAfterCycleTransform(afterGeo, workArea, key);
+    return mergeTransforms([cycleTransform, afterTransform]);
+  }
+  Yanjing2.getSquishTransform = getSquishTransform;
+  function mergeTransforms(transforms) {
+    let result = {};
+    let hasAny = false;
+    for (let i = 0; i < transforms.length; i++) {
+      const t = transforms[i];
+      if (!t) continue;
+      hasAny = true;
+      if (typeof t.x === "number") result.x = t.x;
+      if (typeof t.y === "number") result.y = t.y;
+      if (typeof t.width === "number") result.width = t.width;
+      if (typeof t.height === "number") result.height = t.height;
+    }
+    return hasAny ? result : null;
+  }
   function main() {
     registerShortcut(
       "left",
@@ -250,7 +184,12 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, "Left" /* Left */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, "Left" /* Left */);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -261,7 +200,12 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, "Center" /* Center */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, "Center" /* Center */);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -272,7 +216,12 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        squish(win, "Right" /* Right */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getSquishTransform(geo, workArea, "Right" /* Right */);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -283,8 +232,15 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, "Left" /* Left */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, "Left" /* Left */)
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -295,8 +251,15 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, "Center" /* Center */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, "Center" /* Center */)
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -307,8 +270,15 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        yMax(win);
-        squish(win, "Right" /* Right */);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = mergeTransforms([
+          getYMaxTransform(geo, workArea),
+          getSquishTransform(geo, workArea, "Right" /* Right */)
+        ]);
+        if (!transform) return;
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
     registerShortcut(
@@ -319,7 +289,11 @@ let Yanjing;
         const win = workspace.activeWindow;
         if (!win) return;
         if (win.desktopWindow) return;
-        fauxFullscreen(win);
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getFauxFullscreenTransform(workArea);
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
       }
     );
   }
