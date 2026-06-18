@@ -14,6 +14,9 @@ namespace Yanjing {
   /** Margin of error in px for centering a window. */
   export const CENTER_MOE = 2;
 
+  /** Margin of error in px for grid cell matching. */
+  const GRID_MOE = 2;
+
   // =========================================================================
   // Direction enum
   // =========================================================================
@@ -29,6 +32,7 @@ namespace Yanjing {
   // =========================================================================
 
   const DEFAULT_SIZES = '75,66.6666,50,33.3333,25';
+  const DEFAULT_HEIGHT_SIZES = '66.6666,50,33.3333';
   const DEFAULT_MAX_HEIGHT_PERCENT = 100;
 
   /**
@@ -44,8 +48,11 @@ namespace Yanjing {
       .filter(Boolean);
   }
 
-  /** The hardcoded size percentages. */
+  /** The hardcoded width size percentages. */
   export const Sizes: number[] = sanitizeSizes(DEFAULT_SIZES);
+
+  /** The hardcoded height size percentages (1/3, 1/2, 2/3). */
+  export const HeightSizes: number[] = sanitizeSizes(DEFAULT_HEIGHT_SIZES);
 
   /** The hardcoded max height percent. */
   export const MaxHeightPercent: number = DEFAULT_MAX_HEIGHT_PERCENT;
@@ -117,9 +124,9 @@ namespace Yanjing {
     return smallestI;
   }
 
-  /** Cycle to the next index in Sizes, wrapping around at the end. */
-  export function getNextI(i: number): number {
-    return i >= Sizes.length - 1 ? 0 : i + 1;
+  /** Cycle to the next index in an array, wrapping around at the end. */
+  export function getNextI(i: number, len: number): number {
+    return i >= len - 1 ? 0 : i + 1;
   }
 
   /**
@@ -128,10 +135,50 @@ namespace Yanjing {
    */
   export function getNextWidth(windowWidth: number): number {
     const sizeI = widthToSizeIndex(windowWidth);
-    const nextI = getNextI(sizeI);
+    const nextI = getNextI(sizeI, Sizes.length);
     const nextSize = Sizes[nextI];
     const nextWidth = sizeToWidth(nextSize);
     return parseInt(String(nextWidth), 10);
+  }
+
+  /**
+   * Convert a size percentage (e.g. 33.3333) to a pixel height
+   * relative to the current work area.
+   */
+  export function sizeToHeight(size: number): number {
+    return (size / 100) * getWorkAreaRect().height;
+  }
+
+  /**
+   * Find the index in Sizes whose percentage is closest to the
+   * given window height, measured as a percentage of work area height.
+   */
+  export function heightToSizeIndex(windowHeight: number): number {
+    const intHeightPercent = Math.round(
+      (windowHeight / getWorkAreaRect().height) * 100,
+    );
+
+    let smallestDiff = 9999;
+    let smallestI = 0;
+    HeightSizes.forEach(function (size: number, i: number) {
+      const diff = Math.abs(intHeightPercent - size);
+      if (diff < smallestDiff) {
+        smallestDiff = diff;
+        smallestI = i;
+      }
+    });
+    return smallestI;
+  }
+
+  /**
+   * Get the next cycled height for a window, given its current height.
+   */
+  export function getNextHeight(windowHeight: number): number {
+    const sizeI = heightToSizeIndex(windowHeight);
+    const nextI = getNextI(sizeI, HeightSizes.length);
+    const nextSize = HeightSizes[nextI];
+    const nextHeight = sizeToHeight(nextSize);
+    return parseInt(String(nextHeight), 10);
   }
 
   /**
@@ -261,6 +308,116 @@ namespace Yanjing {
       width: workArea.width,
       height: workArea.height,
     };
+  }
+
+  // =========================================================================
+  // Grid transform
+  // =========================================================================
+
+  /**
+   * Return a transform placing the window in a grid cell.
+   * Divides the work area into `rows` × `cols` cells and places the
+   * window at cell (row, col), spanning `rowSpan` × `colSpan` cells.
+   */
+  export function getGridTransform(
+    _geo: Rect,
+    workArea: Rect,
+    row: number,
+    col: number,
+    rowSpan: number,
+    colSpan: number,
+    rows: number,
+    cols: number,
+  ): Transform {
+    const cellWidth = workArea.width / cols;
+    const cellHeight = workArea.height / rows;
+    return {
+      x: workArea.x + col * cellWidth,
+      y: workArea.y + row * cellHeight,
+      width: cellWidth * colSpan,
+      height: cellHeight * rowSpan,
+    };
+  }
+
+  /**
+   * Grid squish: if not in the target cell, return the grid transform.
+   * If already in the cell (within GRID_MOE), cycle height vertically instead.
+   */
+  export function getGridSquishTransform(
+    geo: Rect,
+    workArea: Rect,
+    row: number,
+    col: number,
+    rows: number,
+    cols: number,
+  ): Transform {
+    const target = getGridTransform(geo, workArea, row, col, 1, 1, rows, cols);
+
+    // Check x and width (the column). For vertical position, check the
+    // anchor-appropriate edge: top edge for top row, bottom edge for bottom
+    // row, vertical center for center row. This lets cycling preserve the
+    // anchor point while still detecting movement to a different row.
+    const colMatches =
+      Math.abs(geo.x - target.x!) <= GRID_MOE &&
+      Math.abs(geo.width - target.width!) <= GRID_MOE;
+    if (!colMatches) return target;
+
+    const vertMatches =
+      row === 0 ? Math.abs(geo.y - target.y!) <= GRID_MOE                // top row: compare top edges
+      : row === rows - 1 ? Math.abs((geo.y + geo.height) - (target.y! + target.height!)) <= GRID_MOE  // bottom row: compare bottom edges
+      : Math.abs((geo.y + geo.height / 2) - (target.y! + target.height! / 2)) <= GRID_MOE;           // center row: compare vertical centers
+
+    if (!vertMatches) return target;
+
+    // Already in cell — cycle height
+    return getVerticalCycleTransform(geo, workArea);
+  }
+
+  // =========================================================================
+  // Vertical cycle
+  // =========================================================================
+
+  /** Vertical anchor mode for height cycling. */
+  type VerticalAnchor = 'top' | 'bottom' | 'middle';
+
+  /**
+   * Determine the vertical anchor by proximity.
+   * Within 10% of work area top → 'top'.
+   * Within 10% of work area bottom → 'bottom'.
+   * Otherwise → 'middle'.
+   */
+  export function getVerticalAnchor(geo: Rect, workArea: Rect): VerticalAnchor {
+    const threshold = workArea.height * 0.1;
+    const topDist = Math.abs(geo.y - workArea.y);
+    const bottomDist = Math.abs((geo.y + geo.height) - (workArea.y + workArea.height));
+
+    if (topDist <= threshold) return 'top';
+    if (bottomDist <= threshold) return 'bottom';
+    return 'middle';
+  }
+
+  /**
+   * Return a transform to cycle the window height to the next configured size.
+   *
+   * Anchor behaviour:
+   * - top: keep y, resize from bottom
+   * - bottom: keep bottom edge, resize from top
+   * - middle: center vertically, resize evenly top and bottom
+   */
+  export function getVerticalCycleTransform(geo: Rect, workArea: Rect): Transform {
+    const nextHeight = getNextHeight(geo.height);
+    const anchor = getVerticalAnchor(geo, workArea);
+
+    if (anchor === 'top') {
+      return { height: nextHeight };
+    }
+    if (anchor === 'bottom') {
+      const bottomEdge = geo.y + geo.height;
+      return { y: bottomEdge - nextHeight, height: nextHeight };
+    }
+    // middle: center vertically
+    const centerY = geo.y + geo.height / 2;
+    return { y: centerY - nextHeight / 2, height: nextHeight };
   }
 
   // =========================================================================
@@ -452,6 +609,71 @@ namespace Yanjing {
         const geo = copyGeometry(win);
         const workArea = getWorkAreaRect();
         const transform = getFauxFullscreenTransform(workArea);
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
+      },
+    );
+
+    // =========================================================================
+    // Grid operations
+    // =========================================================================
+
+    /**
+     * Helper: register a shortcut that places the window in a grid cell.
+     */
+    function gridShortcut(
+      id: string,
+      label: string,
+      defaultKey: string,
+      row: number,
+      col: number,
+      rows: number,
+      cols: number,
+    ): void {
+      registerShortcut(id, label, defaultKey, function () {
+        const win = workspace.activeWindow;
+        if (!win) return;
+        if (win.desktopWindow) return;
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getGridSquishTransform(geo, workArea, row, col, rows, cols);
+        unmax(win);
+        win.frameGeometry = applyTransforms(geo, [transform]);
+      });
+    }
+
+    // Halves: 2 rows × 2 cols
+    gridShortcut('top-half-left', 'Yanjing: Top half — left', '', 0, 0, 2, 2);
+    gridShortcut('top-half-right', 'Yanjing: Top half — right', '', 0, 1, 2, 2);
+    gridShortcut('bottom-half-left', 'Yanjing: Bottom half — left', '', 1, 0, 2, 2);
+    gridShortcut('bottom-half-right', 'Yanjing: Bottom half — right', '', 1, 1, 2, 2);
+
+    // Thirds: 3 rows × 3 cols
+    gridShortcut('top-third-left', 'Yanjing: Top third — left', '', 0, 0, 3, 3);
+    gridShortcut('top-third-center', 'Yanjing: Top third — center', '', 0, 1, 3, 3);
+    gridShortcut('top-third-right', 'Yanjing: Top third — right', '', 0, 2, 3, 3);
+    gridShortcut('center-third-left', 'Yanjing: Center third — left', '', 1, 0, 3, 3);
+    gridShortcut('center-third-center', 'Yanjing: Center third — center', '', 1, 1, 3, 3);
+    gridShortcut('center-third-right', 'Yanjing: Center third — right', '', 1, 2, 3, 3);
+    gridShortcut('bottom-third-left', 'Yanjing: Bottom third — left', '', 2, 0, 3, 3);
+    gridShortcut('bottom-third-center', 'Yanjing: Bottom third — center', '', 2, 1, 3, 3);
+    gridShortcut('bottom-third-right', 'Yanjing: Bottom third — right', '', 2, 2, 3, 3);
+
+    // =========================================================================
+    // Vertical cyclic resize
+    // =========================================================================
+
+    registerShortcut(
+      'cycle-height',
+      'Yanjing: Vertically cyclic resize height',
+      '',
+      function () {
+        const win = workspace.activeWindow;
+        if (!win) return;
+        if (win.desktopWindow) return;
+        const geo = copyGeometry(win);
+        const workArea = getWorkAreaRect();
+        const transform = getVerticalCycleTransform(geo, workArea);
         unmax(win);
         win.frameGeometry = applyTransforms(geo, [transform]);
       },

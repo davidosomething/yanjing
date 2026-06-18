@@ -17,7 +17,7 @@
     "ServiceTypes": [
       "KWin/Script"
     ],
-    "Version": "8.0.4",
+    "Version": "8.0.11",
     "Website": "https://github.com/davidosomething/yanjing"
   },
   "X-KDE-ParentComponents": [

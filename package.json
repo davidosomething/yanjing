@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "yanjing",
-  "version": "8.0.4",
+  "version": "8.0.11",
   "description": "KWin window size and movement [Plasma 6]",
   "homepage": "https://github.com/davidosomething/yanjing",
   "repository": {

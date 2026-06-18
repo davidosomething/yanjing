@@ -53,7 +53,7 @@ it('has Yanjing', () => {
 
 it('calls registerShortcut in main', () => {
   Yanjing.main();
-  expect(global.registerShortcut).toHaveBeenCalledTimes(7);
+  expect(global.registerShortcut).toHaveBeenCalledTimes(21);
 });
 
 // ===========================================================================
@@ -126,14 +126,16 @@ describe('widthToSizeIndex', () => {
 // ===========================================================================
 
 describe('getNextI', () => {
+  const len = 5;
+
   describe('wrap-around at end', () => {
     it.each`
       label               | i
-      ${'last index'}     | ${Yanjing.Sizes.length - 1}
-      ${'past last'}      | ${Yanjing.Sizes.length}
-      ${'way past last'}  | ${Yanjing.Sizes.length + 1}
+      ${'last index'}     | ${len - 1}
+      ${'past last'}      | ${len}
+      ${'way past last'}  | ${len + 1}
     `('returns 0 for $label ($i)', ({ i }) => {
-      expect(Yanjing.getNextI(i)).toBe(0);
+      expect(Yanjing.getNextI(i, len)).toBe(0);
     });
   });
 
@@ -142,7 +144,7 @@ describe('getNextI', () => {
     ${'first'} | ${0} | ${1}
     ${'second'} | ${1} | ${2}
   `('returns $expected for $label index ($i)', ({ i, expected }) => {
-    expect(Yanjing.getNextI(i)).toBe(expected);
+    expect(Yanjing.getNextI(i, len)).toBe(expected);
   });
 });
 
@@ -361,5 +363,160 @@ describe('getSquishTransform', () => {
 
   it('returns null for unknown direction', () => {
     expect(Yanjing.getSquishTransform(geo, WORK_AREA, 'nowhere')).toBeNull();
+  });
+});
+
+// ===========================================================================
+// sizeToHeight / heightToSizeIndex / getNextHeight
+// ===========================================================================
+
+describe('sizeToHeight', () => {
+  it('converts percentage to pixels', () => {
+    expect(Yanjing.sizeToHeight(50)).toBeCloseTo(WORK_AREA.height / 2);
+    expect(Yanjing.sizeToHeight(100)).toBeCloseTo(WORK_AREA.height);
+  });
+});
+
+describe('heightToSizeIndex', () => {
+  it('finds nearest height size index', () => {
+    const idx = Yanjing.heightToSizeIndex(WORK_AREA.height / 2);
+    expect(Yanjing.HeightSizes[idx]).toBe(50);
+  });
+});
+
+describe('getNextHeight', () => {
+  it('cycles to next height', () => {
+    const halfHeight = WORK_AREA.height / 2;
+    const next = Yanjing.getNextHeight(halfHeight);
+    expect(next).toBeGreaterThan(0);
+    expect(next).not.toBeCloseTo(halfHeight, 0);
+  });
+});
+
+// ===========================================================================
+// getGridTransform
+// ===========================================================================
+
+describe('getGridTransform', () => {
+  it('places window in top-left cell of 2x2 grid', () => {
+    const result = Yanjing.getGridTransform({}, WORK_AREA, 0, 0, 1, 1, 2, 2);
+    expect(result.x).toBe(WORK_AREA.x);
+    expect(result.y).toBe(WORK_AREA.y);
+    expect(result.width).toBeCloseTo(WORK_AREA.width / 2);
+    expect(result.height).toBeCloseTo(WORK_AREA.height / 2);
+  });
+
+  it('places window in bottom-right cell of 2x2 grid', () => {
+    const result = Yanjing.getGridTransform({}, WORK_AREA, 1, 1, 1, 1, 2, 2);
+    expect(result.x).toBeCloseTo(WORK_AREA.x + WORK_AREA.width / 2);
+    expect(result.y).toBeCloseTo(WORK_AREA.y + WORK_AREA.height / 2);
+  });
+
+  it('places window in center cell of 3x3 grid', () => {
+    const result = Yanjing.getGridTransform({}, WORK_AREA, 1, 1, 1, 1, 3, 3);
+    expect(result.x).toBeCloseTo(WORK_AREA.x + WORK_AREA.width / 3);
+    expect(result.y).toBeCloseTo(WORK_AREA.y + WORK_AREA.height / 3);
+    expect(result.width).toBeCloseTo(WORK_AREA.width / 3);
+    expect(result.height).toBeCloseTo(WORK_AREA.height / 3);
+  });
+});
+
+// ===========================================================================
+// getGridSquishTransform
+// ===========================================================================
+
+describe('getGridSquishTransform', () => {
+  it('returns grid transform when not in cell', () => {
+    const geo = { x: 999, y: 999, width: 100, height: 100 };
+    const result = Yanjing.getGridSquishTransform(geo, WORK_AREA, 0, 0, 2, 2);
+    expect(result.x).toBe(WORK_AREA.x);
+    expect(result.y).toBe(WORK_AREA.y);
+    expect(result.width).toBeCloseTo(WORK_AREA.width / 2);
+    expect(result.height).toBeCloseTo(WORK_AREA.height / 2);
+  });
+
+  it('returns cycle-height transform when already in cell (same row)', () => {
+    const cellW = WORK_AREA.width / 2;
+    const cellH = WORK_AREA.height / 2;
+    // Top row, top edge matches — should cycle
+    const geo = { x: WORK_AREA.x, y: WORK_AREA.y, width: cellW, height: cellH };
+    const result = Yanjing.getGridSquishTransform(geo, WORK_AREA, 0, 0, 2, 2);
+    expect(typeof result.height).toBe('number');
+    expect(result.x).toBeUndefined();
+    expect(result.width).toBeUndefined();
+  });
+
+  it('returns grid transform when in different row (same column)', () => {
+    const cellW = WORK_AREA.width / 2;
+    // In bottom row but targeting top row — should snap, not cycle
+    const geo = {
+      x: WORK_AREA.x,
+      y: WORK_AREA.y + WORK_AREA.height / 2,
+      width: cellW,
+      height: WORK_AREA.height / 2,
+    };
+    const result = Yanjing.getGridSquishTransform(geo, WORK_AREA, 0, 0, 2, 2);
+    // Should be the full grid transform (snap to top-left)
+    expect(result.x).toBe(WORK_AREA.x);
+    expect(result.y).toBe(WORK_AREA.y);
+  });
+});
+
+// ===========================================================================
+// getVerticalAnchor
+// ===========================================================================
+
+describe('getVerticalAnchor', () => {
+  it('returns top when near top edge', () => {
+    const geo = { x: 100, y: WORK_AREA.y, width: 500, height: 400 };
+    expect(Yanjing.getVerticalAnchor(geo, WORK_AREA)).toBe('top');
+  });
+
+  it('returns bottom when near bottom edge', () => {
+    const geo = {
+      x: 100,
+      y: WORK_AREA.y + WORK_AREA.height - 400,
+      width: 500,
+      height: 400,
+    };
+    expect(Yanjing.getVerticalAnchor(geo, WORK_AREA)).toBe('bottom');
+  });
+
+  it('returns middle when not near either edge', () => {
+    const geo = { x: 100, y: WORK_AREA.y + 300, width: 500, height: 400 };
+    expect(Yanjing.getVerticalAnchor(geo, WORK_AREA)).toBe('middle');
+  });
+});
+
+// ===========================================================================
+// getVerticalCycleTransform
+// ===========================================================================
+
+describe('getVerticalCycleTransform', () => {
+  it('top-anchored: preserves y, changes height', () => {
+    const geo = { x: 100, y: WORK_AREA.y, width: 500, height: 400 };
+    const result = Yanjing.getVerticalCycleTransform(geo, WORK_AREA);
+    expect(result.y).toBeUndefined();
+    expect(typeof result.height).toBe('number');
+    expect(result.height).not.toBe(400);
+  });
+
+  it('bottom-anchored: adjusts y, changes height', () => {
+    const geo = {
+      x: 100,
+      y: WORK_AREA.y + WORK_AREA.height - 400,
+      width: 500,
+      height: 400,
+    };
+    const result = Yanjing.getVerticalCycleTransform(geo, WORK_AREA);
+    expect(typeof result.y).toBe('number');
+    expect(typeof result.height).toBe('number');
+  });
+
+  it('middle-anchored: adjusts both y and height', () => {
+    const geo = { x: 100, y: WORK_AREA.y + 300, width: 500, height: 400 };
+    const result = Yanjing.getVerticalCycleTransform(geo, WORK_AREA);
+    expect(typeof result.y).toBe('number');
+    expect(typeof result.height).toBe('number');
   });
 });
